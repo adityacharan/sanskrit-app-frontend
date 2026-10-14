@@ -45,12 +45,7 @@ function read(): Progress {
   return cache;
 }
 
-// When XP last went up — lets the UI celebrate real gains but not page loads.
-let xpGainedAt = 0;
-export const msSinceXpGain = () => Date.now() - xpGainedAt;
-
 function write(next: Progress) {
-  if (next.xp > cache.xp) xpGainedAt = Date.now();
   const raw = JSON.stringify(next);
   cache = next;
   cacheRaw = raw;

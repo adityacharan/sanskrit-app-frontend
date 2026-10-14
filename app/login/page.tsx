@@ -2,8 +2,9 @@
 
 import { Great_Vibes } from "next/font/google";
 import { useRouter } from "next/navigation";
+import { logIn, safeNext } from "@/lib/session";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
-import { Magnetic, spring, Tilt } from "@/components/ui";
+import { spring } from "@/components/ui";
 
 const signature = Great_Vibes({ weight: "400", subsets: ["latin"] });
 
@@ -14,7 +15,7 @@ const rise = (i: number) => ({
   transition: { ...spring, duration: 0.6, delay: 0.06 * i },
 });
 
-// Dummy login — no credentials, the button just enters the app.
+// Dummy login — no credentials. The button sets a session cookie and enters the app.
 export default function LoginPage() {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -56,14 +57,12 @@ export default function LoginPage() {
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center">
         <motion.div {...rise(0)}>
-          <Tilt max={12}>
             <div
               data-spotlight="light"
               className="flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-accent shadow-lg shadow-accent/25"
             >
               <span className="deva text-5xl leading-none text-accent-ink">सं</span>
             </div>
-          </Tilt>
         </motion.div>
         <motion.h1 {...rise(1)} className="mt-6 text-4xl font-semibold tracking-[-0.025em] sm:text-5xl">
           Learn <span className="text-accent">Sanskrit</span>
@@ -76,16 +75,17 @@ export default function LoginPage() {
         </motion.p>
 
         <motion.div {...rise(4)} className="mt-10 w-full">
-          <Magnetic strength={0.15} max={6}>
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => {
+                logIn();
+                router.replace(safeNext(new URLSearchParams(window.location.search).get("next")));
+              }}
               data-spotlight="light"
               className="w-full rounded-full bg-accent py-3.5 text-lg font-medium text-accent-ink shadow-md shadow-accent/20 hover:shadow-lg hover:shadow-accent/30"
             >
               Login
             </button>
-          </Magnetic>
         </motion.div>
       </div>
 

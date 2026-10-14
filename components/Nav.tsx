@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Dropdown, snappy, spring } from "@/components/ui";
-import { actions, levelFor, msSinceXpGain, useProgress } from "@/lib/progress";
+import { actions, levelFor, useProgress } from "@/lib/progress";
+import { logOut } from "@/lib/session";
 
 export const links = [
   { href: "/", label: "Home", deva: "गृहम्", icon: "🏠" },
@@ -76,15 +77,7 @@ export default function Nav() {
               triggerClassName="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-2.5 pr-1 hover:bg-line/60"
               trigger={() => (
                 <>
-                  <motion.span
-                    key={xp}
-                    initial={msSinceXpGain() < 600 ? { scale: 1.3, color: "var(--accent)" } : false}
-                    animate={{ scale: 1, color: "var(--ink)" }}
-                    transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
-                    className="tabular-nums"
-                  >
-                    ⭐ {xp}
-                  </motion.span>
+                  <span className="tabular-nums">⭐ {xp}</span>
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-ink">
                     {level}
                   </span>
@@ -106,7 +99,11 @@ export default function Nav() {
               onSelect={(key) => {
                 if (key === "home") router.push("/");
                 if (key === "reset" && window.confirm("Reset all XP and learned words? This can't be undone.")) actions.reset();
-                if (key === "logout") router.push("/login");
+                if (key === "logout") {
+                  logOut();
+                  // Full reload so no cached app pages survive the logout.
+                  window.location.assign("/login");
+                }
               }}
             />
           </div>

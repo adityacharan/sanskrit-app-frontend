@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useSpring,
-  type Transition,
-} from "motion/react";
+import { AnimatePresence, motion, type Transition } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { speak } from "@/lib/speak";
 
@@ -15,8 +8,6 @@ import { speak } from "@/lib/speak";
 // "duration" here is the spring's perceived response, not a fixed timeline.
 export const spring: Transition = { type: "spring", bounce: 0, duration: 0.35 };
 export const snappy: Transition = { type: "spring", bounce: 0, duration: 0.22 };
-// Physical spring for pointer-following values (stiffness 400 / damping 40 ≈ damping ratio 1.0).
-const follow = { stiffness: 400, damping: 40 };
 
 // Apple's momentum projection: where a flick would come to rest.
 export const project = (velocity: number, decelerationRate = 0.998) =>
@@ -157,16 +148,22 @@ export function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const pointerType = useRef("");
+  // Mirrors `open` synchronously so a pointerup and the click that follows it
+  // can't both select.
+  const isOpen = useRef(false);
 
   const openMenu = () => {
     setActive(Math.max(0, items.findIndex((i) => i.selected)));
+    isOpen.current = true;
     setOpen(true);
   };
   const close = () => {
+    isOpen.current = false;
     setOpen(false);
     setActive(-1);
   };
   const choose = (key: string) => {
+    if (!isOpen.current) return;
     onSelect(key);
     close();
     triggerRef.current?.focus();
@@ -255,9 +252,8 @@ export function Dropdown({
                 aria-selected={kind === "menu" ? undefined : !!item.selected}
                 onPointerMove={() => active !== i && setActive(i)}
                 // Release over an item selects it — including press-drag-release from the trigger.
-                onPointerDown={(e) => (pointerType.current = e.pointerType)}
                 onPointerUp={(e) => e.pointerType === "mouse" && choose(item.key)}
-                onClick={() => pointerType.current !== "mouse" && choose(item.key)}
+                onClick={() => choose(item.key)}
                 className={`relative flex cursor-default select-none items-center gap-3 rounded-xl px-3 py-2 text-sm ${
                   item.danger ? "text-bad" : "text-ink"
                 }`}
@@ -342,80 +338,5 @@ export function ProgressBar({ value, className = "" }: { value: number; classNam
         transition={spring}
       />
     </div>
-  );
-}
-
-const finePointer = (e: React.PointerEvent) => e.pointerType === "mouse" || e.pointerType === "pen";
-
-// Tilts toward the cursor in 3D, tracking it continuously; springs home on leave.
-export function Tilt({
-  children,
-  className = "",
-  max = 5,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  max?: number;
-}) {
-  const reduce = useReducedMotion();
-  const rx = useSpring(useMotionValue(0), follow);
-  const ry = useSpring(useMotionValue(0), follow);
-
-  return (
-    <motion.div
-      className={className}
-      style={{ rotateX: rx, rotateY: ry, transformPerspective: 900 }}
-      onPointerMove={(e) => {
-        if (reduce || !finePointer(e)) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        const px = (e.clientX - r.left) / r.width - 0.5;
-        const py = (e.clientY - r.top) / r.height - 0.5;
-        ry.set(px * max * 2);
-        rx.set(-py * max * 2);
-      }}
-      onPointerLeave={() => {
-        rx.set(0);
-        ry.set(0);
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-// Gently pulled toward the cursor while hovered; springs back from wherever it is.
-export function Magnetic({
-  children,
-  className = "",
-  strength = 0.25,
-  max = 10,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  strength?: number;
-  max?: number;
-}) {
-  const reduce = useReducedMotion();
-  const x = useSpring(useMotionValue(0), follow);
-  const y = useSpring(useMotionValue(0), follow);
-  const clamp = (v: number) => Math.max(-max, Math.min(max, v));
-
-  return (
-    <motion.div
-      className={className}
-      style={{ x, y }}
-      onPointerMove={(e) => {
-        if (reduce || !finePointer(e)) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        x.set(clamp((e.clientX - (r.left + r.width / 2)) * strength));
-        y.set(clamp((e.clientY - (r.top + r.height / 2)) * strength));
-      }}
-      onPointerLeave={() => {
-        x.set(0);
-        y.set(0);
-      }}
-    >
-      {children}
-    </motion.div>
   );
 }

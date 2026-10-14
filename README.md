@@ -8,11 +8,15 @@ An initiative by **Jaganmohini**.
 
 > **Status:** frontend only. All content is mock data in [`lib/data.ts`](lib/data.ts), and progress is saved in the browser's `localStorage`. There is no backend yet.
 
+## Login (placeholder)
+
+Visitors are sent to `/login` first. Clicking **Login** sets a `sanskrit_session` cookie that lasts a year and takes you into the app, or back to the page you originally asked for. After that, you aren't redirected again until you choose **Log out** from the account menu (the XP badge in the top right). The redirect is done on the server in [`proxy.ts`](proxy.ts) (the Next.js 16 name for middleware), so the app never flashes on screen before the login page.
+
 ## Features
 
 | Page | Path | What it does |
 | --- | --- | --- |
-| Login | `/login` | Placeholder sign-in screen with a single **Login** button (no credentials). |
+| Login | `/login` | Placeholder sign-in screen with a single **Login** button (no credentials). Every page redirects here until you log in. |
 | Home | `/` | Word of the day, level/XP/streak stats, learning path, and per-category progress. |
 | Alphabet | `/alphabet` | Vowels, consonants grouped by where they're pronounced, and conjuncts. Tap a letter to hear it and see an example word. |
 | Vocabulary | `/vocabulary` | Flashcards in 7 categories (greetings, numbers, family, nature, animals, body, verbs). Tap to flip, swipe to move on, mark words as learned. |
@@ -28,7 +32,7 @@ The UI follows Apple's fluid-interface principles:
 
 - **Instant feedback.** Buttons react on press, not on release, and the 300 ms tap delay is removed.
 - **Interruptible springs.** Animations use critically damped springs from [Motion](https://motion.dev), so they can be interrupted and reversed mid-flight.
-- **Cursor tracking.** Cards light up under the pointer, hover pills glide between options, cards tilt toward the cursor, and primary buttons are gently magnetic.
+- **Cursor tracking.** Cards light up under the pointer, and hover pills glide between options. Buttons stay still: no drift, tilt or shake.
 - **Flashcards.** Swipes use momentum projection, so a quick flick counts even if the drag was short.
 - **Dropdowns.** Menus open on press, grow out of their trigger, and support press-drag-release selection and full keyboard control.
 - **Accessibility.** The app respects `prefers-reduced-motion`, `prefers-reduced-transparency` and `prefers-contrast`, and supports light and dark mode.
@@ -69,9 +73,11 @@ app/
 components/
   Nav.tsx             Top bar and mobile tab bar, account menu
   Providers.tsx       MotionConfig (reduced motion) and the pointer-spotlight listener
-  ui.tsx              Shared UI: Tabs, Dropdown, Switch, ProgressBar, Tilt, Magnetic, springs
+  ui.tsx              Shared UI: Tabs, Dropdown, Switch, ProgressBar, springs
+proxy.ts              Redirects to /login until the session cookie is set
 lib/
   data.ts             All learning content (mock data)
+  session.ts          Dummy session cookie: logIn / logOut / safeNext
   progress.ts         XP / learned words / streak store (localStorage)
   speak.ts            Text-to-speech and shuffle helpers
 ```

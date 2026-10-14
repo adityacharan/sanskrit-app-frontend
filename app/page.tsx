@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Magnetic, ProgressBar, SpeakButton, spring, Tilt } from "@/components/ui";
+import { ProgressBar, SpeakButton, spring } from "@/components/ui";
 import { allWords, categories, type Word } from "@/lib/data";
 import { levelFor, useProgress } from "@/lib/progress";
 
@@ -38,16 +38,12 @@ export default function Home() {
             Learn the script, build vocabulary, and read your first shlokas — a few minutes a day.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Magnetic>
-              <Link href="/alphabet" className="block rounded-full bg-accent-ink px-5 py-2.5 font-medium text-accent shadow-sm hover:shadow-md">
-                Start with the alphabet
-              </Link>
-            </Magnetic>
-            <Magnetic>
-              <Link href="/quiz" className="block rounded-full border border-current/40 px-5 py-2.5 font-medium hover:bg-white/10">
-                Take a quiz
-              </Link>
-            </Magnetic>
+            <Link href="/alphabet" className="block rounded-full bg-accent-ink px-5 py-2.5 font-medium text-accent shadow-sm hover:shadow-md">
+              Start with the alphabet
+            </Link>
+            <Link href="/quiz" className="block rounded-full border border-current/40 px-5 py-2.5 font-medium hover:bg-white/10">
+              Take a quiz
+            </Link>
           </div>
         </div>
 
@@ -79,8 +75,8 @@ export default function Home() {
         <h2 className="mb-4 text-xl font-semibold">Learning path</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sections.map((s) => (
-            <Tilt key={s.href}>
             <Link
+              key={s.href}
               href={s.href}
               data-spotlight
               className="group block h-full rounded-2xl border border-line bg-surface p-5 hover:shadow-[0_12px_30px_-12px_rgb(0_0_0/0.18)]"
@@ -96,7 +92,6 @@ export default function Home() {
               </div>
               <p className="mt-3 text-sm text-muted">{s.desc}</p>
             </Link>
-            </Tilt>
           ))}
         </div>
       </section>

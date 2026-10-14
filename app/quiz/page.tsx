@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Chevron, Dropdown, Magnetic, PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
+import { Chevron, Dropdown, PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
 import { allLetters, allWords, categories } from "@/lib/data";
 import { actions, useProgress } from "@/lib/progress";
 import { shuffle, speak } from "@/lib/speak";
@@ -148,7 +148,6 @@ export default function QuizPage() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-4 border-t border-line pt-6">
-            <Magnetic>
               <button
                 type="button"
                 onClick={start}
@@ -157,7 +156,6 @@ export default function QuizPage() {
               >
                 Start quiz →
               </button>
-            </Magnetic>
             {progress.bestScores[quizKey] !== undefined && (
               <p className="text-sm text-muted">Best score: {progress.bestScores[quizKey]}%</p>
             )}
@@ -259,34 +257,19 @@ export default function QuizPage() {
           const state =
             picked === null ? "idle" : opt === q.answer ? "right" : opt === picked ? "wrong" : "dim";
           return (
-            <motion.button
+            <button
               key={`${current}-${opt}`}
               type="button"
               disabled={picked !== null}
               onClick={() => choose(opt)}
               data-spotlight
-              initial={{ opacity: 0, y: 8 }}
-              animate={
-                state === "wrong"
-                  ? { opacity: 1, y: 0, x: [0, -8, 7, -5, 3, 0] }
-                  : state === "right"
-                    ? { opacity: 1, y: 0, scale: [1, 1.04, 1] }
-                    : { opacity: state === "dim" ? 0.5 : 1, y: 0 }
-              }
-              transition={
-                state === "wrong"
-                  ? { duration: 0.4 }
-                  : state === "right"
-                    ? { duration: 0.35 }
-                    : { ...spring, delay: picked === null ? i * 0.03 : 0 }
-              }
               className={`flex items-center gap-3 rounded-2xl border-2 p-4 text-left ${
                 state === "right"
                   ? "border-good bg-good-soft"
                   : state === "wrong"
                     ? "border-bad bg-bad-soft"
                     : state === "dim"
-                      ? "border-line bg-surface"
+                      ? "border-line bg-surface opacity-50"
                       : "border-line bg-surface hover:border-accent/60"
               }`}
             >
@@ -294,7 +277,7 @@ export default function QuizPage() {
                 {i + 1}
               </span>
               <span className={q.optionsAreDeva ? "deva text-2xl" : "text-lg"}>{opt}</span>
-            </motion.button>
+            </button>
           );
         })}
       </div>
