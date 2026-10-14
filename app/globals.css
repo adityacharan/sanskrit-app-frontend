@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fbf6ee;
+  --surface: #ffffff;
+  --surface-2: #f4eadb;
+  --ink: #2b1b12;
+  --muted: #7a6353;
+  --line: #e7d9c5;
+  --accent: #c2410c;
+  --accent-ink: #ffffff;
+  --accent-soft: #fde8d4;
+  --gold: #a16207;
+  --good: #15803d;
+  --good-soft: #dcfce7;
+  --bad: #b91c1c;
+  --bad-soft: #fee2e2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16100c;
+    --surface: #211812;
+    --surface-2: #2c2119;
+    --ink: #f6ece1;
+    --muted: #b49f8d;
+    --line: #3b2d23;
+    --accent: #fb923c;
+    --accent-ink: #1c120c;
+    --accent-soft: #3d2416;
+    --gold: #facc15;
+    --good: #4ade80;
+    --good-soft: #14321f;
+    --bad: #f87171;
+    --bad-soft: #3b1717;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --font-sans: var(--font-inter), var(--font-tiro), system-ui, sans-serif;
+  --font-deva: var(--font-tiro), "Noto Sans Devanagari", serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.deva {
+  font-family: var(--font-deva);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ Interaction */
+
+@layer base {
+  :root { --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* no 300ms tap delay */
+  }
+
+  /* Feedback on press, not on release — and instant. Uses the independent
+     `scale` property so it composes with transforms set by springs. */
+  button:not(:disabled),
+  a,
+  [role="button"] {
+    transition:
+      scale 220ms var(--ease-out),
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      opacity 160ms ease,
+      box-shadow 200ms ease,
+      filter 160ms ease;
+  }
+  button:not(:disabled):active,
+  a:active,
+  [role="button"]:active {
+    scale: 0.97;
+    transition-duration: 60ms;
+  }
+  [role="tab"]:active,
+  [role="switch"]:active {
+    scale: 0.95;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Cursor spotlight: a soft glow and a lit border that track the pointer 1:1.
+   Coordinates are written by <PointerSpotlight/> straight into CSS variables. */
+@media (hover: hover) and (pointer: fine) {
+  [data-spotlight] {
+    position: relative;
+    isolation: isolate;
+    --mx: 50%;
+    --my: 50%;
+    --glow: color-mix(in srgb, var(--accent) 10%, transparent);
+    --edge: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  [data-spotlight="light"] {
+    --glow: rgb(255 255 255 / 0.22);
+    --edge: rgb(255 255 255 / 0.5);
+  }
+  [data-spotlight]::before,
+  [data-spotlight]::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 240ms ease;
+  }
+  [data-spotlight]::before {
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(260px circle at var(--mx) var(--my), var(--glow), transparent 70%);
+  }
+  [data-spotlight]::after {
+    inset: -1px;
+    padding: 1px;
+    background: radial-gradient(160px circle at var(--mx) var(--my), var(--edge), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  [data-spotlight]:hover::before,
+  [data-spotlight]:hover::after {
+    opacity: 1;
+  }
+}
+
+/* Translucent material for floating chrome (nav, menus). */
+/* Menus float over busy content, so they stay close to opaque for legibility. */
+.material {
+  background: var(--surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.material-bar {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material,
+  .material-bar {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .material,
+  .material-bar {
+    background: var(--surface);
+    border-color: var(--ink);
+  }
+}
+
+/* Flashcard faces */
+.flip-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back { transform: rotateY(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a:active,
+  [role="button"]:active { scale: 1; }
+}
