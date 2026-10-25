@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
-import { ProgressBar, SpeakButton, spring } from "@/components/ui";
-import { allWords, categories, type Word } from "@/lib/data";
+import { ProgressBar } from "@/components/ui";
+import { allWords, categories } from "@/lib/data";
 import { levelFor, useProgress } from "@/lib/progress";
 
 const sections = [
-  { href: "/alphabet", title: "Alphabet", deva: "वर्णमाला", desc: "Vowels, consonants and conjuncts of Devanagari with sounds.", icon: "अ" },
+  { href: "/alphabet", title: "Alphabet", deva: "वर्णमाला", desc: "Vowels and consonants of Devanagari with sounds.", icon: "अ" },
   { href: "/vocabulary", title: "Vocabulary", deva: "शब्दाः", desc: "Flashcards across greetings, numbers, family, nature and more.", icon: "📖" },
   { href: "/quiz", title: "Quiz", deva: "परीक्षा", desc: "Test yourself and earn XP for every correct answer.", icon: "🎯" },
   { href: "/grammar", title: "Grammar", deva: "व्याकरणम्", desc: "Noun cases, verb tenses and pronouns in clear tables.", icon: "📐" },
@@ -20,17 +18,9 @@ export default function Home() {
   const { level, into } = levelFor(progress.xp);
   const learned = new Set(progress.learned);
 
-  // Word of the day is picked on the client so it matches the viewer's date.
-  const [wotd, setWotd] = useState<Word | null>(null);
-  useEffect(() => {
-    const d = new Date();
-    const seed = d.getFullYear() * 400 + d.getMonth() * 31 + d.getDate();
-    setWotd(allWords[seed % allWords.length]);
-  }, []);
-
   return (
     <div className="space-y-10">
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <section>
         <div data-spotlight="light" className="rounded-3xl bg-accent p-8 text-accent-ink">
           <p className="deva text-5xl sm:text-6xl">नमस्ते</p>
           <h1 className="mt-3 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">Begin your journey into Sanskrit</h1>
@@ -46,29 +36,13 @@ export default function Home() {
             </Link>
           </div>
         </div>
-
-        <div data-spotlight className="rounded-3xl border border-line bg-surface p-6">
-          <p className="text-xs font-medium uppercase tracking-[0.08em] text-muted">Word of the day</p>
-          {wotd ? (
-            <motion.div className="mt-4" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={spring}>
-              <div className="flex items-center gap-3">
-                <p className="deva text-5xl">{wotd.deva}</p>
-                <SpeakButton text={wotd.deva} />
-              </div>
-              <p className="mt-2 text-lg italic text-accent">{wotd.translit}</p>
-              <p className="text-muted">{wotd.meaning}</p>
-            </motion.div>
-          ) : (
-            <div className="mt-4 h-28 animate-pulse rounded-xl bg-surface-2" />
-          )}
-        </div>
       </section>
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Level" value={level} extra={<ProgressBar value={into} className="mt-3" />} />
         <Stat label="Total XP" value={progress.xp} />
         <Stat label="Day streak" value={`${progress.streak} 🔥`} />
-        <Stat label="Words learned" value={`${learned.size}/${allWords.length}`} />
+        <Stat label="Words learned" value={`${allWords.filter((w) => learned.has(w.id)).length}/${allWords.length}`} />
       </section>
 
       <section>

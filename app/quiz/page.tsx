@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Chevron, Dropdown, PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
-import { allLetters, allWords, categories } from "@/lib/data";
+import { allLetters, allWords, categories, greetingSentences } from "@/lib/data";
 import { actions, useProgress } from "@/lib/progress";
 import { shuffle, speak } from "@/lib/speak";
 
@@ -14,6 +14,7 @@ type Question = { item: Item; prompt: string; promptIsDeva: boolean; options: st
 const sources = [
   { value: "all", label: "🌐 All words" },
   { value: "alphabet", label: "अ Alphabet" },
+  { value: "greeting-sentences", label: "💬 Greeting sentences" },
   ...categories.map((c) => ({ value: c.slug, label: `${c.icon} ${c.title}` })),
 ];
 
@@ -25,6 +26,7 @@ const modes: { value: Mode; label: string; needsMeaning: boolean }[] = [
 
 function poolFor(source: string): Item[] {
   if (source === "alphabet") return allLetters;
+  if (source === "greeting-sentences") return greetingSentences;
   if (source === "all") return allWords;
   return categories.find((c) => c.slug === source)?.words ?? allWords;
 }
@@ -193,11 +195,15 @@ export default function QuizPage() {
             <p className="mb-3 font-medium">Review these</p>
             <ul className="space-y-2">
               {missed.map((q) => (
-                <li key={q.item.id} className="flex items-center gap-3">
+                <li key={q.item.id} className="flex items-start gap-3">
                   <SpeakButton text={q.item.deva} />
-                  <span className="deva text-xl">{q.item.deva}</span>
-                  <span className="italic text-muted">{q.item.translit}</span>
-                  {q.item.meaning && <span className="ml-auto text-sm">{q.item.meaning}</span>}
+                  <div className="min-w-0">
+                    <p className="deva text-xl">{q.item.deva}</p>
+                    <p className="text-sm text-muted">
+                      <em>{q.item.translit}</em>
+                      {q.item.meaning && <> · {q.item.meaning}</>}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -244,7 +250,7 @@ export default function QuizPage() {
             initial={{ opacity: 0, scale: 0.9, filter: "blur(6px)" }}
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             transition={spring}
-            className={q.promptIsDeva ? "deva text-6xl" : "text-3xl font-semibold"}
+            className={q.promptIsDeva ? (q.prompt.length > 12 ? "deva text-4xl" : "deva text-6xl") : "text-3xl font-semibold"}
           >
             {q.prompt}
           </motion.p>

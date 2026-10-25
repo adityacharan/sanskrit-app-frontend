@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { PageHeader, SpeakButton, spring, Tabs } from "@/components/ui";
-import { conjuncts, consonants, vowels, type Letter, type LetterGroup } from "@/lib/data";
+import { consonants, vowels, type Letter, type LetterGroup } from "@/lib/data";
 import { speak } from "@/lib/speak";
 
-type Tab = "vowels" | "consonants" | "conjuncts";
-const groups: Record<Tab, LetterGroup[]> = { vowels, consonants, conjuncts };
+type Tab = "vowels" | "consonants";
+const groups: Record<Tab, LetterGroup[]> = { vowels, consonants };
 
 export default function AlphabetPage() {
   const [tab, setTab] = useState<Tab>("vowels");
@@ -18,7 +18,7 @@ export default function AlphabetPage() {
       <PageHeader
         deva="वर्णमाला"
         title="The Devanagari Alphabet"
-        subtitle="Sanskrit is written in Devanagari. Letters are arranged by where in the mouth they're pronounced — tap any letter to hear it and see an example."
+        subtitle="Sanskrit is written in Devanagari. Tap any letter to hear it and see an example."
       />
 
       <Tabs
@@ -30,12 +30,19 @@ export default function AlphabetPage() {
         options={[
           { value: "vowels", label: "Vowels · स्वराः" },
           { value: "consonants", label: "Consonants · व्यञ्जनानि" },
-          { value: "conjuncts", label: "Conjuncts" },
         ]}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
+          {tab === "consonants" && (
+            <Note>
+              In Devanagari, pure consonants natively end with a small diagonal slash underneath the letter called a{" "}
+              <em>halanta</em> (e.g. <span className="deva text-ink">क्, ख्, ग्, घ्, ङ्</span>). However, for ease of
+              pronunciation and writing, they are naturally combined with the inherent short vowel “a” and written as{" "}
+              <span className="deva text-ink">क, ख, ग, घ, ङ</span>.
+            </Note>
+          )}
           {groups[tab].map((g) => (
             <div key={g.name}>
               {groups[tab].length > 1 && (
@@ -43,7 +50,7 @@ export default function AlphabetPage() {
                   {g.name} <span className="deva">· {g.sanskrit}</span>
                 </p>
               )}
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
+              <div className="grid grid-cols-5 gap-2 md:grid-cols-6">
                 {g.letters.map((l) => (
                   <button
                     key={l.id}
@@ -110,13 +117,24 @@ export default function AlphabetPage() {
         </aside>
       </div>
 
-      <div className="mt-10 rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
-        <p className="font-medium text-ink">Tip: the inherent “a”</p>
-        <p className="mt-1">
-          Every consonant carries a built-in “a” sound — <span className="deva text-ink">क</span> is “ka”, not just
-          “k”. A small slash called a <em>virāma</em> removes it: <span className="deva text-ink">क्</span> = “k”.
-        </p>
-      </div>
+      {tab === "consonants" && (
+        <Note className="mt-10">
+          Vowels (<span className="deva text-ink">स्वराः</span>, <span className="deva text-ink">अ</span>–
+          <span className="deva text-ink">औ</span>): 13. Anusvāra and visarga (
+          <span className="deva text-ink">अयोगवाहौ</span>): 2. Consonants (<span className="deva text-ink">क</span>–
+          <span className="deva text-ink">ह</span>): 33. In total, 48 letters are counted in the Sanskrit{" "}
+          <span className="deva text-ink">वर्णमाला</span>.
+        </Note>
+      )}
+    </div>
+  );
+}
+
+function Note({ className = "", children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={`rounded-2xl border border-line bg-surface p-5 text-sm text-muted ${className}`}>
+      <p className="font-medium text-ink">Note</p>
+      <p className="mt-1">{children}</p>
     </div>
   );
 }

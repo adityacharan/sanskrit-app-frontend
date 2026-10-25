@@ -8,13 +8,21 @@ Next.js 16 web app for learning Sanskrit (alphabet, vocabulary, grammar, phrases
 
 - **Frontend only, mock data.** The owner explicitly said no backend for now. All content is in `lib/data.ts`. Progress (XP, learned words, quiz best scores, streak) is in `localStorage` via `lib/progress.ts`. Don't add API routes, databases or auth providers unless asked.
 - **The login is a placeholder, but it gates the app** (the owner asked for this). `proxy.ts` (Next 16's renamed middleware) redirects every page to `/login?next=…` until the `sanskrit_session` cookie exists, and redirects `/login` to `/` once it does. The Login button calls `logIn()` from `lib/session.ts` (a one-year cookie) and then `router.replace(safeNext(next))`. Account menu → Log out calls `logOut()` and does a full reload to `/login`. It's a cookie, not localStorage, so the redirect happens on the server with no flash of the app. `safeNext` only allows same-site paths, which blocks open redirects through `?next=//evil`.
-- **Branding on the login page:** the logo says "Learn Sanskrit". The Sanskrit line is **संस्कृतं पठतु** (saṃskṛtaṃ paṭhatu) — the owner corrected this from पठामः, so don't change it back. The tagline is "From simple letters to beautiful poems, one step at a time." The footer reads "An initiative by" plus **Jaganmohini** in the Great Vibes cursive signature font.
+- **Branding on the login page:** the logo is the owner's Chandravidya (चन्द्रविद्या) Saraswati emblem, `public/logo.png`, with the quote **श्रद्धावान् लभते ज्ञानम्** under it. The same emblem sits next to the संस्कृतम् wordmark in the nav bar. The heading says "Learn Sanskrit". The Sanskrit line is **संस्कृतं पठतु** (saṃskṛtaṃ paṭhatu) — the owner corrected this from पठामः, so don't change it back. The tagline is "From simple letters to beautiful poems, one step at a time." The footer reads "An initiative by" plus **Jaganmohini** in the Great Vibes cursive signature font.
 - The owner cares about Sanskrit accuracy. Use IAST romanization and double-check forms before adding content.
 - **Verb content comes from the owner's document**, `Sanskrit_20_Dhatus_All_Persons.docx`, which sits in the parent folder outside the repo. The owner asked for exactly the changes in it and nothing more, so follow it closely when it's updated. It gave:
   - **20 dhatus in the present tense (लट्), nine forms each, in the doc's order.** They're built with the `present()` helper in `lib/data.ts`. The doc doesn't mention पठ्'s past (लङ्) and future (लृट्) tables, so they were kept; ask before removing them.
   - **Examples covering every person, number and gender** (`verbExamples`), shown under "Examples · उदाहरणानि". The doc had no English for ताः गच्छन्ति, तत् चलति, ते चलतः and तानि चलन्ति, so "They go.", "It moves.", "Those two move." and "They move." were filled in. IAST was added to every example to match the rest of the app.
   - **The note on persons and numbers** under the verb table. The doc's red text "(This should be for all verbs)" was an instruction, not content, so the note sits outside the per-verb data and shows for every verb.
   - अस् is labelled "to be / to become" because the doc says so, the same as भू. Strictly, अस् is just "to be"; the owner hasn't decided yet whether to change it.
+- **A second owner document, `Changes P-1.docx`** (also in the parent folder), made these changes. Don't bring back what it removed:
+  - **Logo and quote:** see the branding bullet above.
+  - **No Word of the Day on the home page.** The hero card is full width.
+  - **Alphabet page:** the subtitle no longer says letters are arranged by where in the mouth they're pronounced. The inherent-"a" tip and the Conjuncts tab are gone, and conjuncts were removed from `lib/data.ts` and the alphabet quiz.
+  - **Consonants** are grouped as the five vargas (कवर्गः … पवर्गः, five letters each), then the four semivowels, then the four sibilants (श ष स ह). The consonants tab opens with the owner's halanta note (क् … ङ् are written क … ङ) and ends with the 48-letter count: 13 vowels, 2 अयोगवाहौ, 33 consonants. The vowels tab still lists अं and अः, because the doc only asked for the note.
+  - **Greetings vocabulary is exactly the doc's table**, with धन्यवादः corrected to धन्यवादाः. नमस्काराः / नमस्ते / प्रणामाः is a single card, so the English → Sanskrit quiz never offers one of them as a wrong answer for another.
+  - **A new "Good Manners · शिष्टाचारः" category** holds the doc's second table plus the four words listed after it. क्षम्यताम् and पुनर्मिलामः moved there from Greetings.
+  - **The doc's 17 greeting sentences** (`greetingSentences`) are a quiz source, "Greeting sentences". The doc asked for them "as Quiz", so they aren't shown on the Phrases page. The stray "।," in सुप्रभातम्, मान्ये। was fixed. Long quiz prompts use a smaller font so sentences fit on a phone.
 
 ## Commands
 
@@ -53,6 +61,8 @@ npm run typecheck
 - **Buttons must be simple and steady.** The owner found magnetic buttons, tilting cards, the quiz answer shake/pop and the XP badge bounce "too shaky", so they were removed. Button feedback is the instant press scale plus hover color/border changes only. Don't add motion that moves buttons around under the cursor.
 
 ## Pitfalls already hit
+
+- **Word IDs are `${slug}:${translit}`**, and learned progress stores those IDs in `localStorage`. Renaming or moving a word leaves its old ID behind, so count learned words against `allWords` (as Home and the account menu do), never `progress.learned.length`.
 
 - **Dropdown selection must fire once.** A mouse release on an item selects it (`pointerup`), and the `click` that follows must not select again. `isOpen` is a ref, updated synchronously, that guards `choose()`. Item `onClick` must stay unconditional, because programmatic and assistive-tech clicks arrive without a preceding `pointerdown`.
 - **Press vs tap:** commit on `pointerdown` only for `pointerType === "mouse"`. Touch must wait for `click`, or starting a scroll selects things. `Tabs` and `Dropdown` track the last pointer type in a ref, so a mouse press and its click don't toggle twice.

@@ -49,8 +49,8 @@ export const vowels: LetterGroup[] = [
 
 export const consonants: LetterGroup[] = [
   {
-    name: "Velar",
-    sanskrit: "कण्ठ्य",
+    name: "Ka-varga",
+    sanskrit: "कवर्गः",
     letters: [
       L("क", "ka", "k in 'skin'", ["कमलम्", "kamalam", "lotus"]),
       L("ख", "kha", "k in 'kite' (aspirated)", ["खगः", "khagaḥ", "bird"]),
@@ -60,8 +60,8 @@ export const consonants: LetterGroup[] = [
     ],
   },
   {
-    name: "Palatal",
-    sanskrit: "तालव्य",
+    name: "Ca-varga",
+    sanskrit: "चवर्गः",
     letters: [
       L("च", "ca", "ch in 'chunk'", ["चन्द्रः", "candraḥ", "moon"]),
       L("छ", "cha", "ch-h in 'church-hill'", ["छत्रम्", "chatram", "umbrella"]),
@@ -71,8 +71,8 @@ export const consonants: LetterGroup[] = [
     ],
   },
   {
-    name: "Retroflex",
-    sanskrit: "मूर्धन्य",
+    name: "Ṭa-varga",
+    sanskrit: "टवर्गः",
     letters: [
       L("ट", "ṭa", "t with tongue curled back"),
       L("ठ", "ṭha", "aspirated ṭ"),
@@ -82,8 +82,8 @@ export const consonants: LetterGroup[] = [
     ],
   },
   {
-    name: "Dental",
-    sanskrit: "दन्त्य",
+    name: "Ta-varga",
+    sanskrit: "तवर्गः",
     letters: [
       L("त", "ta", "t with tongue on teeth", ["तरुः", "taruḥ", "tree"]),
       L("थ", "tha", "aspirated t (not 'th' in 'thin')"),
@@ -93,8 +93,8 @@ export const consonants: LetterGroup[] = [
     ],
   },
   {
-    name: "Labial",
-    sanskrit: "ओष्ठ्य",
+    name: "Pa-varga",
+    sanskrit: "पवर्गः",
     letters: [
       L("प", "pa", "p in 'spin'", ["पुष्पम्", "puṣpam", "flower"]),
       L("फ", "pha", "p in 'pot' (aspirated)", ["फलम्", "phalam", "fruit"]),
@@ -114,7 +114,7 @@ export const consonants: LetterGroup[] = [
     ],
   },
   {
-    name: "Sibilants & h",
+    name: "Sibilants",
     sanskrit: "ऊष्म",
     letters: [
       L("श", "śa", "sh in 'shut'", ["शशः", "śaśaḥ", "rabbit"]),
@@ -125,22 +125,7 @@ export const consonants: LetterGroup[] = [
   },
 ];
 
-export const conjuncts: LetterGroup[] = [
-  {
-    name: "Common conjuncts",
-    sanskrit: "संयुक्ताक्षराणि",
-    letters: [
-      L("क्ष", "kṣa", "k + ṣ", ["क्षमा", "kṣamā", "forgiveness"]),
-      L("त्र", "tra", "t + r", ["मित्रम्", "mitram", "friend"]),
-      L("ज्ञ", "jña", "j + ñ (often 'gya')", ["ज्ञानम्", "jñānam", "knowledge"]),
-      L("श्र", "śra", "ś + r", ["श्रमः", "śramaḥ", "effort"]),
-      L("द्य", "dya", "d + y", ["विद्या", "vidyā", "learning"]),
-      L("स्त", "sta", "s + t", ["हस्तः", "hastaḥ", "hand"]),
-    ],
-  },
-];
-
-export const allLetters: Letter[] = [...vowels, ...consonants, ...conjuncts].flatMap(
+export const allLetters: Letter[] = [...vowels, ...consonants].flatMap(
   (g) => g.letters,
 );
 
@@ -184,14 +169,28 @@ const cat = (
 
 export const categories: Category[] = [
   cat("greetings", "Greetings", "अभिवादनम्", "🙏", [
-    ["नमस्ते", "namaste", "hello / I bow to you"],
-    ["धन्यवादः", "dhanyavādaḥ", "thank you"],
-    ["स्वागतम्", "svāgatam", "welcome"],
+    ["हरिः ॐ", "hariḥ oṃ", "hello"],
     ["सुप्रभातम्", "suprabhātam", "good morning"],
+    ["नमस्काराः / नमस्ते / प्रणामाः", "namaskārāḥ / namaste / praṇāmāḥ", "salutations"],
     ["शुभरात्रिः", "śubharātriḥ", "good night"],
-    ["क्षम्यताम्", "kṣamyatām", "sorry / excuse me"],
-    ["पुनर्मिलामः", "punarmilāmaḥ", "see you again"],
+    ["धन्यवादाः", "dhanyavādāḥ", "thank you"],
+    ["स्वागतम्", "svāgatam", "welcome"],
     ["कुशलम्", "kuśalam", "well / fine"],
+  ]),
+  cat("manners", "Good Manners", "शिष्टाचारः", "🤝", [
+    ["क्षम्यताम्", "kṣamyatām", "excuse / pardon me"],
+    ["चिन्ता मास्तु", "cintā māstu", "don't worry"],
+    ["कृपया", "kṛpayā", "please"],
+    ["पुनर्मिलामः", "punarmilāmaḥ", "let us meet again"],
+    ["अस्तु", "astu", "all right / OK"],
+    ["श्रीमन् / मान्यवर", "śrīman / mānyavara", "sir"],
+    ["मान्ये / आर्ये", "mānye / ārye", "lady"],
+    ["उत्तमम् / शोभनम्", "uttamam / śobhanam", "good"],
+    ["साधु साधु / समीचीनम्", "sādhu sādhu / samīcīnam", "very good"],
+    ["आगच्छन्तु", "āgacchantu", "come"],
+    ["पुनः आगच्छन्तु", "punaḥ āgacchantu", "come again"],
+    ["उपविशन्तु", "upaviśantu", "sit"],
+    ["महान् आनन्दः", "mahān ānandaḥ", "very happy"],
   ]),
   cat("numbers", "Numbers", "सङ्ख्याः", "🔢", [
     ["एकम्", "ekam", "one"],
@@ -544,6 +543,27 @@ export const phrases: Phrase[] = [
   { deva: "जलं ददातु।", translit: "jalaṃ dadātu.", meaning: "Please give (me) water." },
   { deva: "बालकः फलं खादति।", translit: "bālakaḥ phalaṃ khādati.", meaning: "The boy eats a fruit." },
 ];
+
+// Greeting sentences (अभिवादनानि). The quiz uses these as their own source.
+export const greetingSentences: (Phrase & { id: string })[] = [
+  ["हरिः ॐ। सुप्रभातम्।", "hariḥ oṃ. suprabhātam.", "Hari Om. Good morning."],
+  ["नमस्ते, मान्यवर।", "namaste, mānyavara.", "Greetings, Sir."],
+  ["नमस्ते, मान्ये।", "namaste, mānye.", "Greetings, Madam."],
+  ["कुशलम्। धन्यवादाः।", "kuśalam. dhanyavādāḥ.", "Fine. Thank you."],
+  ["स्वागतम्। आगच्छन्तु।", "svāgatam. āgacchantu.", "Welcome. Please come."],
+  ["कृपया उपविशन्तु।", "kṛpayā upaviśantu.", "Please sit down."],
+  ["क्षम्यताम्। चिन्ता मास्तु।", "kṣamyatām. cintā māstu.", "Excuse me. Don't worry."],
+  ["साधु साधु। समीचीनम्।", "sādhu sādhu. samīcīnam.", "Very good. Excellent."],
+  ["शोभनम्। समीचीनम्।", "śobhanam. samīcīnam.", "Good. Excellent."],
+  ["धन्यवादाः। पुनर्मिलामः।", "dhanyavādāḥ. punarmilāmaḥ.", "Thank you. Let us meet again."],
+  ["कृपया पुनः आगच्छन्तु।", "kṛpayā punaḥ āgacchantu.", "Please come again."],
+  ["कृपया आगच्छन्तु, उपविशन्तु।", "kṛpayā āgacchantu, upaviśantu.", "Please come. Please sit down."],
+  ["अस्तु। नमस्ते।", "astu. namaste.", "All right. Greetings."],
+  ["शुभरात्रिः, मान्यवर।", "śubharātriḥ, mānyavara.", "Good night, Sir."],
+  ["सुप्रभातम्, मान्ये।", "suprabhātam, mānye.", "Good morning, Madam."],
+  ["स्वागतम्। महान् आनन्दः।", "svāgatam. mahān ānandaḥ.", "Welcome. Great happiness."],
+  ["नमस्काराः! सर्वं कुशलम् वा?", "namaskārāḥ! sarvaṃ kuśalam vā?", "Salutations / Greetings! Is everything well?"],
+].map(([deva, translit, meaning], i) => ({ id: `greeting-sentence:${i}`, deva, translit, meaning }));
 
 export type Shloka = {
   title: string;

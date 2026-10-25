@@ -230,7 +230,7 @@ function Flashcard({
               ✓ Learned
             </span>
           )}
-          <p className="deva text-6xl">{word.deva}</p>
+          <p className={`deva text-center ${word.deva.length > 12 ? "text-4xl" : "text-6xl"}`}>{word.deva}</p>
           <p className="mt-3 text-lg italic text-muted">{word.translit}</p>
           <p className="absolute bottom-4 text-xs text-muted">Tap to flip · swipe for next</p>
         </div>

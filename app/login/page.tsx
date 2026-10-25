@@ -1,6 +1,7 @@
 "use client";
 
 import { Great_Vibes } from "next/font/google";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { logIn, safeNext } from "@/lib/session";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
@@ -56,13 +57,9 @@ export default function LoginPage() {
       <div />
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center">
-        <motion.div {...rise(0)}>
-            <div
-              data-spotlight="light"
-              className="flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-accent shadow-lg shadow-accent/25"
-            >
-              <span className="deva text-5xl leading-none text-accent-ink">सं</span>
-            </div>
+        <motion.div {...rise(0)} className="flex flex-col items-center">
+          <Image src="/logo.png" alt="Chandravidya logo" width={152} height={163} priority className="h-32 w-auto" />
+          <p className="deva mt-3 text-lg text-accent">श्रद्धावान् लभते ज्ञानम्</p>
         </motion.div>
         <motion.h1 {...rise(1)} className="mt-6 text-4xl font-semibold tracking-[-0.025em] sm:text-5xl">
           Learn <span className="text-accent">Sanskrit</span>

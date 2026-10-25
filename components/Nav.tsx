@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Dropdown, snappy, spring } from "@/components/ui";
+import { allWords } from "@/lib/data";
 import { actions, levelFor, useProgress } from "@/lib/progress";
 import { logOut } from "@/lib/session";
 
@@ -31,7 +33,8 @@ export default function Nav() {
     <>
       <header className="material-bar sticky top-0 z-30 border-b border-line/60">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
-          <Link href="/" className="deva text-2xl font-semibold text-accent">
+          <Link href="/" className="deva flex items-center gap-2 text-2xl font-semibold text-accent">
+            <Image src="/logo.png" alt="" width={152} height={163} priority className="h-9 w-auto" />
             संस्कृतम्
           </Link>
 
@@ -87,7 +90,7 @@ export default function Nav() {
                 <div className="mb-1 border-b border-line px-3 pb-2.5 pt-1.5">
                   <p className="font-medium">Level {level}</p>
                   <p className="text-xs text-muted">
-                    {xp} XP · {learned.length} words · {streak} day streak
+                    {xp} XP · {allWords.filter((w) => learned.includes(w.id)).length} words · {streak} day streak
                   </p>
                 </div>
               }
