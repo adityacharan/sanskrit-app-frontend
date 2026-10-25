@@ -21,7 +21,7 @@ Visitors are sent to `/login` first. Clicking **Login** sets a `sanskrit_session
 | Alphabet | `/alphabet` | Vowels, and consonants grouped as the five vargas, the semivowels and the sibilants. Tap a letter to hear it and see an example word. |
 | Vocabulary | `/vocabulary` | Flashcards in 8 categories (greetings, good manners, numbers, family, nature, animals, body, verbs). Tap to flip, swipe to move on, mark words as learned. |
 | Quiz | `/quiz` | 10-question multiple choice on words, letters or greeting sentences: Sanskrit → English, English → Sanskrit, or script → romanization. Keys `1`–`4` answer, `Enter` continues. |
-| Grammar | `/grammar` | Noun declensions (राम, फल, लता), present-tense conjugations of 20 dhatus (plus पठ् in the past and future) and pronouns, with a practice mode that hides forms until you tap them. |
+| Grammar | `/grammar` | Noun declensions (राम, फल, लता), present-tense conjugations of 20 dhatus with example sentences for each (plus पठ् in the past and future) and pronouns, with a practice mode that hides forms until you tap them. |
 | Phrases | `/phrases` | Everyday sentences and five shlokas. Romanization and meaning can be switched on and off. |
 
 Pronunciation uses the browser's built-in speech synthesis with a Hindi voice, because Sanskrit voices are rare. If your system has no Hindi voice, the speaker buttons do nothing.
@@ -60,7 +60,7 @@ npm run typecheck  # TypeScript check
 - TypeScript 5
 - [Tailwind CSS v4](https://tailwindcss.com)
 - [Motion](https://motion.dev) for springs, gestures and layout animation
-- Fonts via `next/font`: Inter (UI), Tiro Devanagari Sanskrit (Devanagari), Great Vibes (signature)
+- Fonts via `next/font`: Inter (UI), Tiro Devanagari Sanskrit (Devanagari)
 
 ## Project structure
 

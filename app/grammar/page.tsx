@@ -17,6 +17,7 @@ export default function GrammarPage() {
 
   const noun = declensions.find((d) => d.id === nounId)!;
   const verb = conjugations.find((c) => c.id === verbId)!;
+  const examples = verbExamples(verb);
 
   const resetReveal = () => setRevealed(new Set());
   const reveal = (id: string) => setRevealed((r) => new Set(r).add(id));
@@ -168,26 +169,28 @@ export default function GrammarPage() {
             <span className="deva">मध्यमपुरुषः</span> 2nd person and <span className="deva">उत्तमपुरुषः</span> 1st person.
             Each verb has nine forms: three persons × three numbers.
           </p>
-          <div className="mt-6 rounded-2xl bg-accent-soft p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-accent">
-              Examples · <span className="deva normal-case">उदाहरणानि</span>
-            </p>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-              {verbExamples.map((e) => (
-                <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
-                  <SpeakButton text={e.deva} />
-                  <div>
-                    <p className="deva text-xl">{e.deva}</p>
-                    <p className="text-sm italic text-muted">{e.translit}</p>
-                    <p className="text-sm">
-                      {e.meaning}
-                      {e.note && <span className="deva text-muted"> ({e.note})</span>}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {examples.length > 0 && (
+            <div className="mt-6 rounded-2xl bg-accent-soft p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-accent">
+                Examples · <span className="deva normal-case">उदाहरणानि</span>
+              </p>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                {examples.map((e) => (
+                  <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
+                    <SpeakButton text={e.deva} />
+                    <div>
+                      <p className="deva text-xl">{e.deva}</p>
+                      <p className="text-sm italic text-muted">{e.translit}</p>
+                      <p className="text-sm">
+                        {e.meaning}
+                        {e.note && <span className="deva text-muted"> ({e.note})</span>}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 

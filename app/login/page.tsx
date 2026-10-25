@@ -1,13 +1,10 @@
 "use client";
 
-import { Great_Vibes } from "next/font/google";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { logIn, safeNext } from "@/lib/session";
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
 import { spring } from "@/components/ui";
-
-const signature = Great_Vibes({ weight: "400", subsets: ["latin"] });
 
 // Content rises in, one beat after another.
 const rise = (i: number) => ({
@@ -32,7 +29,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col items-center justify-between overflow-y-auto bg-bg px-4 py-10"
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center overflow-y-auto bg-bg px-4 py-10"
       onPointerMove={(e) => {
         if (reduce || e.pointerType === "touch") return;
         px.set(e.clientX / window.innerWidth - 0.5);
@@ -53,8 +50,6 @@ export default function LoginPage() {
           अ
         </motion.span>
       </div>
-
-      <div />
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center">
         <motion.div {...rise(0)} className="flex flex-col items-center">
@@ -85,11 +80,6 @@ export default function LoginPage() {
             </button>
         </motion.div>
       </div>
-
-      <motion.footer {...rise(6)} className="relative mt-12 text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">An initiative by</p>
-        <p className={`${signature.className} mt-1 text-5xl text-ink`}>Jaganmohini</p>
-      </motion.footer>
     </div>
   );
 }
