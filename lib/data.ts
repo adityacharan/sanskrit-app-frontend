@@ -357,20 +357,21 @@ export type Conjugation = {
   forms: [string, string, string][]; // per person: [sg, du, pl]
 };
 
+// Present tense (लट्), the nine forms of each dhatu.
+const present = (
+  id: string,
+  root: string,
+  translit: string,
+  meaning: string,
+  forms: [string, string, string][],
+): Conjugation => ({ id, root, translit, meaning, tense: "Present", tenseSanskrit: "लट्", forms });
+
 export const conjugations: Conjugation[] = [
-  {
-    id: "path-present",
-    root: "पठ्",
-    translit: "paṭh",
-    meaning: "to read",
-    tense: "Present",
-    tenseSanskrit: "लट्",
-    forms: [
-      ["पठति", "पठतः", "पठन्ति"],
-      ["पठसि", "पठथः", "पठथ"],
-      ["पठामि", "पठावः", "पठामः"],
-    ],
-  },
+  present("path-present", "पठ्", "paṭh", "to read", [
+    ["पठति", "पठतः", "पठन्ति"],
+    ["पठसि", "पठथः", "पठथ"],
+    ["पठामि", "पठावः", "पठामः"],
+  ]),
   {
     id: "path-past",
     root: "पठ्",
@@ -397,19 +398,122 @@ export const conjugations: Conjugation[] = [
       ["पठिष्यामि", "पठिष्यावः", "पठिष्यामः"],
     ],
   },
-  {
-    id: "gam-present",
-    root: "गम्",
-    translit: "gam",
-    meaning: "to go",
-    tense: "Present",
-    tenseSanskrit: "लट्",
-    forms: [
-      ["गच्छति", "गच्छतः", "गच्छन्ति"],
-      ["गच्छसि", "गच्छथः", "गच्छथ"],
-      ["गच्छामि", "गच्छावः", "गच्छामः"],
-    ],
-  },
+  present("likh-present", "लिख्", "likh", "to write", [
+    ["लिखति", "लिखतः", "लिखन्ति"],
+    ["लिखसि", "लिखथः", "लिखथ"],
+    ["लिखामि", "लिखावः", "लिखामः"],
+  ]),
+  present("gam-present", "गम्", "gam", "to go", [
+    ["गच्छति", "गच्छतः", "गच्छन्ति"],
+    ["गच्छसि", "गच्छथः", "गच्छथ"],
+    ["गच्छामि", "गच्छावः", "गच्छामः"],
+  ]),
+  present("agam-present", "आ + गम्", "ā + gam", "to come", [
+    ["आगच्छति", "आगच्छतः", "आगच्छन्ति"],
+    ["आगच्छसि", "आगच्छथः", "आगच्छथ"],
+    ["आगच्छामि", "आगच्छावः", "आगच्छामः"],
+  ]),
+  present("khad-present", "खाद्", "khād", "to eat", [
+    ["खादति", "खादतः", "खादन्ति"],
+    ["खादसि", "खादथः", "खादथ"],
+    ["खादामि", "खादावः", "खादामः"],
+  ]),
+  present("pa-present", "पा", "pā", "to drink", [
+    ["पिबति", "पिबतः", "पिबन्ति"],
+    ["पिबसि", "पिबथः", "पिबथ"],
+    ["पिबामि", "पिबावः", "पिबामः"],
+  ]),
+  present("drs-present", "दृश्", "dṛś", "to see", [
+    ["पश्यति", "पश्यतः", "पश्यन्ति"],
+    ["पश्यसि", "पश्यथः", "पश्यथ"],
+    ["पश्यामि", "पश्यावः", "पश्यामः"],
+  ]),
+  present("krid-present", "क्रीड्", "krīḍ", "to play", [
+    ["क्रीडति", "क्रीडतः", "क्रीडन्ति"],
+    ["क्रीडसि", "क्रीडथः", "क्रीडथ"],
+    ["क्रीडामि", "क्रीडावः", "क्रीडामः"],
+  ]),
+  present("has-present", "हस्", "has", "to laugh", [
+    ["हसति", "हसतः", "हसन्ति"],
+    ["हससि", "हसथः", "हसथ"],
+    ["हसामि", "हसावः", "हसामः"],
+  ]),
+  present("vad-present", "वद्", "vad", "to speak", [
+    ["वदति", "वदतः", "वदन्ति"],
+    ["वदसि", "वदथः", "वदथ"],
+    ["वदामि", "वदावः", "वदामः"],
+  ]),
+  present("cal-present", "चल्", "cal", "to walk / to move", [
+    ["चलति", "चलतः", "चलन्ति"],
+    ["चलसि", "चलथः", "चलथ"],
+    ["चलामि", "चलावः", "चलामः"],
+  ]),
+  present("dhav-present", "धाव्", "dhāv", "to run", [
+    ["धावति", "धावतः", "धावन्ति"],
+    ["धावसि", "धावथः", "धावथ"],
+    ["धावामि", "धावावः", "धावामः"],
+  ]),
+  present("nrt-present", "नृत्", "nṛt", "to dance", [
+    ["नृत्यति", "नृत्यतः", "नृत्यन्ति"],
+    ["नृत्यसि", "नृत्यथः", "नृत्यथ"],
+    ["नृत्यामि", "नृत्यावः", "नृत्यामः"],
+  ]),
+  present("nam-present", "नम्", "nam", "to bow", [
+    ["नमति", "नमतः", "नमन्ति"],
+    ["नमसि", "नमथः", "नमथ"],
+    ["नमामि", "नमावः", "नमामः"],
+  ]),
+  present("smr-present", "स्मृ", "smṛ", "to remember", [
+    ["स्मरति", "स्मरतः", "स्मरन्ति"],
+    ["स्मरसि", "स्मरथः", "स्मरथ"],
+    ["स्मरामि", "स्मरावः", "स्मरामः"],
+  ]),
+  present("kr-present", "कृ", "kṛ", "to do", [
+    ["करोति", "कुरुतः", "कुर्वन्ति"],
+    ["करोषि", "कुरुथः", "कुरुथ"],
+    ["करोमि", "कुर्वः", "कुर्मः"],
+  ]),
+  present("stha-present", "स्था", "sthā", "to stand", [
+    ["तिष्ठति", "तिष्ठतः", "तिष्ठन्ति"],
+    ["तिष्ठसि", "तिष्ठथः", "तिष्ठथ"],
+    ["तिष्ठामि", "तिष्ठावः", "तिष्ठामः"],
+  ]),
+  present("ni-present", "नी", "nī", "to lead / to take", [
+    ["नयति", "नयतः", "नयन्ति"],
+    ["नयसि", "नयथः", "नयथ"],
+    ["नयामि", "नयावः", "नयामः"],
+  ]),
+  present("bhu-present", "भू", "bhū", "to be / to become", [
+    ["भवति", "भवतः", "भवन्ति"],
+    ["भवसि", "भवथः", "भवथ"],
+    ["भवामि", "भवावः", "भवामः"],
+  ]),
+  present("as-present", "अस्", "as", "to be / to become", [
+    ["अस्ति", "स्तः", "सन्ति"],
+    ["असि", "स्थः", "स्थ"],
+    ["अस्मि", "स्वः", "स्मः"],
+  ]),
+];
+
+// Example sentences for the verbs tab: every person and number, then every gender.
+export type VerbExample = { deva: string; translit: string; meaning: string; note?: string };
+
+export const verbExamples: VerbExample[] = [
+  { deva: "अहं पठामि।", translit: "ahaṃ paṭhāmi.", meaning: "I read." },
+  { deva: "आवां पठावः।", translit: "āvāṃ paṭhāvaḥ.", meaning: "We two read." },
+  { deva: "वयं पठामः।", translit: "vayaṃ paṭhāmaḥ.", meaning: "We all read." },
+  { deva: "त्वं गच्छसि।", translit: "tvaṃ gacchasi.", meaning: "You go." },
+  { deva: "युवां गच्छथः।", translit: "yuvāṃ gacchathaḥ.", meaning: "You two go." },
+  { deva: "यूयं गच्छथ।", translit: "yūyaṃ gacchatha.", meaning: "You all go." },
+  { deva: "सः गच्छति।", translit: "saḥ gacchati.", meaning: "He goes.", note: "पुल्लिङ्ग - एकवचनम्" },
+  { deva: "तौ गच्छतः।", translit: "tau gacchataḥ.", meaning: "Those two go.", note: "पुल्लिङ्ग - द्विवचनम्" },
+  { deva: "ते गच्छन्ति।", translit: "te gacchanti.", meaning: "They go.", note: "पुल्लिङ्ग - बहुवचनम्" },
+  { deva: "सा गच्छति।", translit: "sā gacchati.", meaning: "She goes.", note: "स्त्रीलिङ्ग - एकवचनम्" },
+  { deva: "ते गच्छतः।", translit: "te gacchataḥ.", meaning: "Those two go.", note: "स्त्रीलिङ्ग - द्विवचनम्" },
+  { deva: "ताः गच्छन्ति।", translit: "tāḥ gacchanti.", meaning: "They go.", note: "स्त्रीलिङ्ग - बहुवचनम्" },
+  { deva: "तत् चलति।", translit: "tat calati.", meaning: "It moves.", note: "नपुंसकलिङ्ग - एकवचनम्" },
+  { deva: "ते चलतः।", translit: "te calataḥ.", meaning: "Those two move.", note: "नपुंसकलिङ्ग - द्विवचनम्" },
+  { deva: "तानि चलन्ति।", translit: "tāni calanti.", meaning: "They move.", note: "नपुंसकलिङ्ग - बहुवचनम्" },
 ];
 
 export const pronouns = [

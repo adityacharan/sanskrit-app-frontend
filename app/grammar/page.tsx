@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { PageHeader, SpeakButton, spring, Switch, Tabs } from "@/components/ui";
-import { cases, conjugations, declensions, persons, pronouns } from "@/lib/data";
+import { cases, conjugations, declensions, persons, pronouns, verbExamples } from "@/lib/data";
 
 type Tab = "nouns" | "verbs" | "pronouns";
 const numbers = ["Singular · एकवचनम्", "Dual · द्विवचनम्", "Plural · बहुवचनम्"];
@@ -163,10 +163,31 @@ export default function GrammarPage() {
             </table>
           </div>
           <p className="mt-3 text-sm text-muted">
-            Note: Sanskrit’s “1st person” in the traditional order is listed last — <span className="deva">उत्तमपुरुषः</span>{" "}
-            means “I / we”.
+            Note: Sanskrit has three persons (<span className="deva">पुरुषाः</span>) and three numbers (
+            <span className="deva">वचनानि</span>). <span className="deva">प्रथमपुरुषः</span> means 3rd person,{" "}
+            <span className="deva">मध्यमपुरुषः</span> 2nd person and <span className="deva">उत्तमपुरुषः</span> 1st person.
+            Each verb has nine forms: three persons × three numbers.
           </p>
-          <Example deva="अहं पुस्तकं पठामि।" translit="ahaṃ pustakaṃ paṭhāmi." meaning="I read a book." />
+          <div className="mt-6 rounded-2xl bg-accent-soft p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-accent">
+              Examples · <span className="deva normal-case">उदाहरणानि</span>
+            </p>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+              {verbExamples.map((e) => (
+                <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
+                  <SpeakButton text={e.deva} />
+                  <div>
+                    <p className="deva text-xl">{e.deva}</p>
+                    <p className="text-sm italic text-muted">{e.translit}</p>
+                    <p className="text-sm">
+                      {e.meaning}
+                      {e.note && <span className="deva text-muted"> ({e.note})</span>}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       )}
 
