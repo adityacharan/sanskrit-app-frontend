@@ -238,7 +238,7 @@ export function Dropdown({
             exit={{ opacity: 0, scale: 0.96, y: -6, filter: "blur(4px)" }}
             transition={snappy}
             style={{ transformOrigin: align === "start" ? "top left" : "top right" }}
-            className={`material absolute top-full z-50 mt-2 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.25)] ${
+            className={`material absolute top-full z-50 mt-2 max-h-[min(28rem,70vh)] min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.25)] ${
               align === "start" ? "left-0" : "right-0"
             }`}
             onPointerLeave={() => setActive(-1)}

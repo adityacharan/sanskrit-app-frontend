@@ -1,7 +1,5 @@
 // Mock content for the app. No backend — everything lives here.
 
-import { toIAST } from "./iast";
-
 export type Letter = {
   id: string;
   deva: string;
@@ -139,6 +137,8 @@ export type Word = {
   translit: string;
   meaning: string;
   category: string;
+  numeral?: string; // numbers only: "१ (1)"
+  note?: string; // shown on the card back and in the word list
 };
 
 export type Category = {
@@ -169,6 +169,184 @@ const cat = (
   })),
 });
 
+// Numbers 1–100 from the owner's P-2_Numbers document, in its order and spelling.
+// 1–4 change with the gender of the noun (masculine / feminine / neuter); 5 onwards don't.
+const genderNote =
+  "The forms of Sanskrit numbers for 1–4 can vary according to the gender of the noun being counted. For example, एकः बालकः, एका बालिका, एकं फलम्. Numbers from 5 onwards there are no gender differences.";
+
+const numberRows: [string, string, string][] = [
+  ["एकः / एका / एकम्", "ekaḥ / ekā / ekam", "one"],
+  ["द्वौ / द्वे / द्वे", "dvau / dve / dve", "two"],
+  ["त्रयः / तिस्रः / त्रीणि", "trayaḥ / tisraḥ / trīṇi", "three"],
+  ["चत्वारः / चतस्रः / चत्वारि", "catvāraḥ / catasraḥ / catvāri", "four"],
+  ["पञ्च", "pañca", "five"],
+  ["षट्", "ṣaṭ", "six"],
+  ["सप्त", "sapta", "seven"],
+  ["अष्ट", "aṣṭa", "eight"],
+  ["नव", "nava", "nine"],
+  ["दश", "daśa", "ten"],
+  ["एकादश", "ekādaśa", "eleven"],
+  ["द्वादश", "dvādaśa", "twelve"],
+  ["त्रयोदश", "trayodaśa", "thirteen"],
+  ["चतुर्दश", "caturdaśa", "fourteen"],
+  ["पञ्चदश", "pañcadaśa", "fifteen"],
+  ["षोडश", "ṣoḍaśa", "sixteen"],
+  ["सप्तदश", "saptadaśa", "seventeen"],
+  ["अष्टादश", "aṣṭādaśa", "eighteen"],
+  ["नवदश / एकोनविंशतिः", "navadaśa / ekonaviṃśatiḥ", "nineteen"],
+  ["विंशतिः", "viṃśatiḥ", "twenty"],
+  ["एकविंशतिः", "ekaviṃśatiḥ", "twenty-one"],
+  ["द्वाविंशतिः", "dvāviṃśatiḥ", "twenty-two"],
+  ["त्रयोविंशतिः", "trayoviṃśatiḥ", "twenty-three"],
+  ["चतुर्विंशतिः", "caturviṃśatiḥ", "twenty-four"],
+  ["पञ्चविंशतिः", "pañcaviṃśatiḥ", "twenty-five"],
+  ["षड् विंशतिः", "ṣaḍviṃśatiḥ", "twenty-six"],
+  ["सप्तविंशतिः", "saptaviṃśatiḥ", "twenty-seven"],
+  ["अष्टाविंशतिः", "aṣṭāviṃśatiḥ", "twenty-eight"],
+  ["नवविंशतिः / एकोनत्रिंशत्", "navaviṃśatiḥ / ekonatriṃśat", "twenty-nine"],
+  ["त्रिंशत्", "triṃśat", "thirty"],
+  ["एकत्रिंशत्", "ekatriṃśat", "thirty-one"],
+  ["द्वात्रिंशत्", "dvātriṃśat", "thirty-two"],
+  ["त्रयस्त्रिंशत्", "trayastriṃśat", "thirty-three"],
+  ["चतुस्त्रिंशत्", "catustriṃśat", "thirty-four"],
+  ["पञ्चत्रिंशत्", "pañcatriṃśat", "thirty-five"],
+  ["षट् त्रिंशत्", "ṣaṭtriṃśat", "thirty-six"],
+  ["सप्तत्रिंशत्", "saptatriṃśat", "thirty-seven"],
+  ["अष्टात्रिंशत्", "aṣṭātriṃśat", "thirty-eight"],
+  ["नवत्रिंशत् / एकोनचत्वारिंशत्", "navatriṃśat / ekonacatvāriṃśat", "thirty-nine"],
+  ["चत्वारिंशत्", "catvāriṃśat", "forty"],
+  ["एकचत्वारिंशत्", "ekacatvāriṃśat", "forty-one"],
+  ["द्विचत्वारिंशत्", "dvicatvāriṃśat", "forty-two"],
+  ["त्रिचत्वारिंशत्", "tricatvāriṃśat", "forty-three"],
+  ["चतुश्चत्वारिंशत्", "catuścatvāriṃśat", "forty-four"],
+  ["पञ्चचत्वारिंशत्", "pañcacatvāriṃśat", "forty-five"],
+  ["षट् चत्वारिंशत्", "ṣaṭcatvāriṃśat", "forty-six"],
+  ["सप्तचत्वारिंशत्", "saptacatvāriṃśat", "forty-seven"],
+  ["अष्टचत्वारिंशत्", "aṣṭacatvāriṃśat", "forty-eight"],
+  ["नवचत्वारिंशत् / एकोनपञ्चाशत्", "navacatvāriṃśat / ekonapañcāśat", "forty-nine"],
+  ["पञ्चाशत्", "pañcāśat", "fifty"],
+  ["एकपञ्चाशत्", "ekapañcāśat", "fifty-one"],
+  ["द्विपञ्चाशत्", "dvipañcāśat", "fifty-two"],
+  ["त्रिपञ्चाशत्", "tripañcāśat", "fifty-three"],
+  ["चतुष्पञ्चाशत्", "catuṣpañcāśat", "fifty-four"],
+  ["पञ्चपञ्चाशत्", "pañcapañcāśat", "fifty-five"],
+  ["षट् पञ्चाशत्", "ṣaṭpañcāśat", "fifty-six"],
+  ["सप्तपञ्चाशत्", "saptapañcāśat", "fifty-seven"],
+  ["अष्टपञ्चाशत्", "aṣṭapañcāśat", "fifty-eight"],
+  ["नवपञ्चाशत् / एकोनषष्टिः", "navapañcāśat / ekonaṣaṣṭiḥ", "fifty-nine"],
+  ["षष्टिः", "ṣaṣṭiḥ", "sixty"],
+  ["एकषष्टिः", "ekaṣaṣṭiḥ", "sixty-one"],
+  ["द्विषष्टिः", "dviṣaṣṭiḥ", "sixty-two"],
+  ["त्रिषष्टिः", "triṣaṣṭiḥ", "sixty-three"],
+  ["चतुःषष्टिः", "catuḥṣaṣṭiḥ", "sixty-four"],
+  ["पञ्चषष्टिः", "pañcaṣaṣṭiḥ", "sixty-five"],
+  ["षट् षष्टिः", "ṣaṭṣaṣṭiḥ", "sixty-six"],
+  ["सप्तषष्टिः", "saptaṣaṣṭiḥ", "sixty-seven"],
+  ["अष्टषष्टिः", "aṣṭaṣaṣṭiḥ", "sixty-eight"],
+  ["नवषष्टिः / एकोनसप्ततिः", "navaṣaṣṭiḥ / ekonasaptatiḥ", "sixty-nine"],
+  ["सप्ततिः", "saptatiḥ", "seventy"],
+  ["एकसप्ततिः", "ekasaptatiḥ", "seventy-one"],
+  ["द्विसप्ततिः", "dvisaptatiḥ", "seventy-two"],
+  ["त्रिसप्ततिः", "trisaptatiḥ", "seventy-three"],
+  ["चतुःसप्ततिः", "catuḥsaptatiḥ", "seventy-four"],
+  ["पञ्चसप्ततिः", "pañcasaptatiḥ", "seventy-five"],
+  ["षट् सप्ततिः", "ṣaṭsaptatiḥ", "seventy-six"],
+  ["सप्तसप्ततिः", "saptasaptatiḥ", "seventy-seven"],
+  ["अष्टसप्ततिः", "aṣṭasaptatiḥ", "seventy-eight"],
+  ["नवसप्ततिः / एकोनाशीतिः", "navasaptatiḥ / ekonāśītiḥ", "seventy-nine"],
+  ["अशीतिः", "aśītiḥ", "eighty"],
+  ["एकाशीतिः", "ekāśītiḥ", "eighty-one"],
+  ["द्व्यशीतिः", "dvyaśītiḥ", "eighty-two"],
+  ["त्र्यशीतिः", "tryaśītiḥ", "eighty-three"],
+  ["चतुरशीतिः", "caturaśītiḥ", "eighty-four"],
+  ["पञ्चाशीतिः", "pañcāśītiḥ", "eighty-five"],
+  ["षडशीतिः", "ṣaḍaśītiḥ", "eighty-six"],
+  ["सप्ताशीतिः", "saptāśītiḥ", "eighty-seven"],
+  ["अष्टाशीतिः", "aṣṭāśītiḥ", "eighty-eight"],
+  ["नवाशीतिः / एकोननवतिः", "navāśītiḥ / ekonanavatiḥ", "eighty-nine"],
+  ["नवतिः", "navatiḥ", "ninety"],
+  ["एकनवतिः", "ekanavatiḥ", "ninety-one"],
+  ["द्विनवतिः", "dvinavatiḥ", "ninety-two"],
+  ["त्रिनवतिः", "trinavatiḥ", "ninety-three"],
+  ["चतुर्नवतिः", "caturnavatiḥ", "ninety-four"],
+  ["पञ्चनवतिः", "pañcanavatiḥ", "ninety-five"],
+  ["षण्णवतिः", "ṣaṇṇavatiḥ", "ninety-six"],
+  ["सप्तनवतिः", "saptanavatiḥ", "ninety-seven"],
+  ["अष्टनवतिः", "aṣṭanavatiḥ", "ninety-eight"],
+  ["नवनवतिः / एकोनशतम्", "navanavatiḥ / ekonaśatam", "ninety-nine"],
+  ["शतम्", "śatam", "one hundred"],
+];
+
+export const toDevaDigits = (n: number) => String(n).replace(/\d/g, (d) => "०१२३४५६७८९"[Number(d)]);
+
+const numbers: Category = {
+  slug: "numbers",
+  title: "Numbers",
+  sanskrit: "सङ्ख्याः",
+  icon: "🔢",
+  words: numberRows.map(([deva, translit, meaning], i) => {
+    const n = i + 1;
+    return {
+      id: `numbers:${n}`,
+      deva,
+      translit,
+      meaning,
+      category: "numbers",
+      numeral: `${toDevaDigits(n)} (${n})`,
+      note: n <= 4 ? genderNote : undefined,
+    };
+  }),
+};
+
+// The names of the powers of ten, shown under the numbers. From Bhāskarācārya's Līlāvatī.
+export type LargeNumber = { power: number; value: string; deva: string; translit: string; meaning: string };
+
+const withCommas = (digits: string) => digits.replace(/\B(?=(\d{3})+$)/g, ",");
+
+export const largeNumbers: {
+  shloka: { deva: string[]; translit: string[] };
+  intro: string;
+  rows: LargeNumber[];
+} = {
+  shloka: {
+    deva: [
+      "एकदशशतसहस्रायुतलक्षप्रयुतकोटयः क्रमशः।",
+      "अर्बुदम् न्यर्बुदम् खर्वं निखर्वं महापद्म शङ्कवस्तस्मात्॥",
+      "जलधिश्चान्त्यं मध्यं परार्धमिति दशगुणोत्तराः संज्ञाः॥",
+    ],
+    translit: [
+      "ekadaśaśatasahasrāyutalakṣaprayutakoṭayaḥ kramaśaḥ,",
+      "arbudam nyarbudam kharvaṃ nikharvaṃ mahāpadma śaṅkavas tasmāt,",
+      "jaladhiś cāntyaṃ madhyaṃ parārdham iti daśaguṇottarāḥ saṃjñāḥ.",
+    ],
+  },
+  intro: "Based on this shloka composed by the 12th-century mathematician Bhaskaracharya, each name is ten times the one before it:",
+  rows: (
+    [
+      ["दश", "daśa", "ten"],
+      ["शतम्", "śatam", "hundred"],
+      ["सहस्रम्", "sahasram", "thousand"],
+      ["अयुतम्", "ayutam", "ten thousand"],
+      ["लक्षम् / नियुतम्", "lakṣam / niyutam", "lakh / hundred thousand"],
+      ["प्रयुतम्", "prayutam", "ten lakh / one million"],
+      ["कोटिः", "koṭiḥ", "one crore / ten million"],
+      ["अर्बुदम्", "arbudam", "ten crore / hundred million"],
+      ["न्यर्बुदम्", "nyarbudam", "hundred crore / one billion"],
+      ["खर्वम्", "kharvam", "thousand crore / ten billion"],
+      ["निखर्वम्", "nikharvam", "ten thousand crore / hundred billion"],
+      ["महापद्मम्", "mahāpadmam", "one lakh crore / one trillion"],
+      ["शङ्कुः", "śaṅkuḥ", "ten lakh crore / ten trillion"],
+      ["समुद्रः / जलधिः", "samudraḥ / jaladhiḥ", "one crore crore / hundred trillion"],
+      ["अन्त्यम्", "antyam", "one quadrillion"],
+      ["मध्यम्", "madhyam", "ten quadrillion"],
+      ["परार्धम्", "parārdham", "hundred quadrillion"],
+    ] as [string, string, string][]
+  ).map(([deva, translit, meaning], i) => {
+    const power = i + 1;
+    return { power, value: withCommas("1" + "0".repeat(power)), deva, translit, meaning };
+  }),
+};
+
 export const categories: Category[] = [
   cat("greetings", "Greetings", "अभिवादनम्", "🙏", [
     ["हरिः ॐ", "hariḥ oṃ", "hello"],
@@ -194,18 +372,7 @@ export const categories: Category[] = [
     ["उपविशन्तु", "upaviśantu", "sit"],
     ["महान् आनन्दः", "mahān ānandaḥ", "very happy"],
   ]),
-  cat("numbers", "Numbers", "सङ्ख्याः", "🔢", [
-    ["एकम्", "ekam", "one"],
-    ["द्वे", "dve", "two"],
-    ["त्रीणि", "trīṇi", "three"],
-    ["चत्वारि", "catvāri", "four"],
-    ["पञ्च", "pañca", "five"],
-    ["षट्", "ṣaṭ", "six"],
-    ["सप्त", "sapta", "seven"],
-    ["अष्ट", "aṣṭa", "eight"],
-    ["नव", "nava", "nine"],
-    ["दश", "daśa", "ten"],
-  ]),
+  numbers,
   cat("family", "Family", "कुटुम्बम्", "👪", [
     ["माता", "mātā", "mother"],
     ["पिता", "pitā", "father"],
@@ -249,18 +416,6 @@ export const categories: Category[] = [
     ["हस्तः", "hastaḥ", "hand"],
     ["पादः", "pādaḥ", "foot"],
     ["हृदयम्", "hṛdayam", "heart"],
-  ]),
-  cat("verbs", "Verbs", "क्रियाः", "🏃", [
-    ["गच्छति", "gacchati", "goes"],
-    ["पठति", "paṭhati", "reads / studies"],
-    ["लिखति", "likhati", "writes"],
-    ["खादति", "khādati", "eats"],
-    ["पिबति", "pibati", "drinks"],
-    ["वदति", "vadati", "speaks"],
-    ["पश्यति", "paśyati", "sees"],
-    ["धावति", "dhāvati", "runs"],
-    ["हसति", "hasati", "laughs"],
-    ["क्रीडति", "krīḍati", "plays"],
   ]),
 ];
 
@@ -342,195 +497,9 @@ export const declensions: Declension[] = [
   },
 ];
 
-export const persons = [
-  { name: "3rd person", sanskrit: "प्रथमपुरुषः", hint: "he / she / they" },
-  { name: "2nd person", sanskrit: "मध्यमपुरुषः", hint: "you" },
-  { name: "1st person", sanskrit: "उत्तमपुरुषः", hint: "I / we" },
-];
-
-export type Conjugation = {
-  id: string;
-  root: string;
-  translit: string;
-  meaning: string;
-  tense: string;
-  tenseSanskrit: string;
-  forms: [string, string, string][]; // per person: [sg, du, pl]
-  english?: [string, string, string]; // present tense, after "I" / "we, you, they" / "he, she, it"
-};
-
-// Present tense (लट्), the nine forms of each dhatu.
-const present = (
-  id: string,
-  root: string,
-  translit: string,
-  meaning: string,
-  english: [string, string, string],
-  forms: [string, string, string][],
-): Conjugation => ({ id, root, translit, meaning, tense: "Present", tenseSanskrit: "लट्", forms, english });
-
-export const conjugations: Conjugation[] = [
-  present("path-present", "पठ्", "paṭh", "to read", ["read", "read", "reads"], [
-    ["पठति", "पठतः", "पठन्ति"],
-    ["पठसि", "पठथः", "पठथ"],
-    ["पठामि", "पठावः", "पठामः"],
-  ]),
-  {
-    id: "path-past",
-    root: "पठ्",
-    translit: "paṭh",
-    meaning: "to read",
-    tense: "Past (imperfect)",
-    tenseSanskrit: "लङ्",
-    forms: [
-      ["अपठत्", "अपठताम्", "अपठन्"],
-      ["अपठः", "अपठतम्", "अपठत"],
-      ["अपठम्", "अपठाव", "अपठाम"],
-    ],
-  },
-  {
-    id: "path-future",
-    root: "पठ्",
-    translit: "paṭh",
-    meaning: "to read",
-    tense: "Future",
-    tenseSanskrit: "लृट्",
-    forms: [
-      ["पठिष्यति", "पठिष्यतः", "पठिष्यन्ति"],
-      ["पठिष्यसि", "पठिष्यथः", "पठिष्यथ"],
-      ["पठिष्यामि", "पठिष्यावः", "पठिष्यामः"],
-    ],
-  },
-  present("likh-present", "लिख्", "likh", "to write", ["write", "write", "writes"], [
-    ["लिखति", "लिखतः", "लिखन्ति"],
-    ["लिखसि", "लिखथः", "लिखथ"],
-    ["लिखामि", "लिखावः", "लिखामः"],
-  ]),
-  present("gam-present", "गम्", "gam", "to go", ["go", "go", "goes"], [
-    ["गच्छति", "गच्छतः", "गच्छन्ति"],
-    ["गच्छसि", "गच्छथः", "गच्छथ"],
-    ["गच्छामि", "गच्छावः", "गच्छामः"],
-  ]),
-  present("agam-present", "आ + गम्", "ā + gam", "to come", ["come", "come", "comes"], [
-    ["आगच्छति", "आगच्छतः", "आगच्छन्ति"],
-    ["आगच्छसि", "आगच्छथः", "आगच्छथ"],
-    ["आगच्छामि", "आगच्छावः", "आगच्छामः"],
-  ]),
-  present("khad-present", "खाद्", "khād", "to eat", ["eat", "eat", "eats"], [
-    ["खादति", "खादतः", "खादन्ति"],
-    ["खादसि", "खादथः", "खादथ"],
-    ["खादामि", "खादावः", "खादामः"],
-  ]),
-  present("pa-present", "पा", "pā", "to drink", ["drink", "drink", "drinks"], [
-    ["पिबति", "पिबतः", "पिबन्ति"],
-    ["पिबसि", "पिबथः", "पिबथ"],
-    ["पिबामि", "पिबावः", "पिबामः"],
-  ]),
-  present("drs-present", "दृश्", "dṛś", "to see", ["see", "see", "sees"], [
-    ["पश्यति", "पश्यतः", "पश्यन्ति"],
-    ["पश्यसि", "पश्यथः", "पश्यथ"],
-    ["पश्यामि", "पश्यावः", "पश्यामः"],
-  ]),
-  present("krid-present", "क्रीड्", "krīḍ", "to play", ["play", "play", "plays"], [
-    ["क्रीडति", "क्रीडतः", "क्रीडन्ति"],
-    ["क्रीडसि", "क्रीडथः", "क्रीडथ"],
-    ["क्रीडामि", "क्रीडावः", "क्रीडामः"],
-  ]),
-  present("has-present", "हस्", "has", "to laugh", ["laugh", "laugh", "laughs"], [
-    ["हसति", "हसतः", "हसन्ति"],
-    ["हससि", "हसथः", "हसथ"],
-    ["हसामि", "हसावः", "हसामः"],
-  ]),
-  present("vad-present", "वद्", "vad", "to speak", ["speak", "speak", "speaks"], [
-    ["वदति", "वदतः", "वदन्ति"],
-    ["वदसि", "वदथः", "वदथ"],
-    ["वदामि", "वदावः", "वदामः"],
-  ]),
-  present("cal-present", "चल्", "cal", "to walk / to move", ["move", "move", "moves"], [
-    ["चलति", "चलतः", "चलन्ति"],
-    ["चलसि", "चलथः", "चलथ"],
-    ["चलामि", "चलावः", "चलामः"],
-  ]),
-  present("dhav-present", "धाव्", "dhāv", "to run", ["run", "run", "runs"], [
-    ["धावति", "धावतः", "धावन्ति"],
-    ["धावसि", "धावथः", "धावथ"],
-    ["धावामि", "धावावः", "धावामः"],
-  ]),
-  present("nrt-present", "नृत्", "nṛt", "to dance", ["dance", "dance", "dances"], [
-    ["नृत्यति", "नृत्यतः", "नृत्यन्ति"],
-    ["नृत्यसि", "नृत्यथः", "नृत्यथ"],
-    ["नृत्यामि", "नृत्यावः", "नृत्यामः"],
-  ]),
-  present("nam-present", "नम्", "nam", "to bow", ["bow", "bow", "bows"], [
-    ["नमति", "नमतः", "नमन्ति"],
-    ["नमसि", "नमथः", "नमथ"],
-    ["नमामि", "नमावः", "नमामः"],
-  ]),
-  present("smr-present", "स्मृ", "smṛ", "to remember", ["remember", "remember", "remembers"], [
-    ["स्मरति", "स्मरतः", "स्मरन्ति"],
-    ["स्मरसि", "स्मरथः", "स्मरथ"],
-    ["स्मरामि", "स्मरावः", "स्मरामः"],
-  ]),
-  present("kr-present", "कृ", "kṛ", "to do", ["do", "do", "does"], [
-    ["करोति", "कुरुतः", "कुर्वन्ति"],
-    ["करोषि", "कुरुथः", "कुरुथ"],
-    ["करोमि", "कुर्वः", "कुर्मः"],
-  ]),
-  present("stha-present", "स्था", "sthā", "to stand", ["stand", "stand", "stands"], [
-    ["तिष्ठति", "तिष्ठतः", "तिष्ठन्ति"],
-    ["तिष्ठसि", "तिष्ठथः", "तिष्ठथ"],
-    ["तिष्ठामि", "तिष्ठावः", "तिष्ठामः"],
-  ]),
-  present("ni-present", "नी", "nī", "to lead / to take", ["lead", "lead", "leads"], [
-    ["नयति", "नयतः", "नयन्ति"],
-    ["नयसि", "नयथः", "नयथ"],
-    ["नयामि", "नयावः", "नयामः"],
-  ]),
-  present("bhu-present", "भू", "bhū", "to be / to become", ["become", "become", "becomes"], [
-    ["भवति", "भवतः", "भवन्ति"],
-    ["भवसि", "भवथः", "भवथ"],
-    ["भवामि", "भवावः", "भवामः"],
-  ]),
-  present("as-present", "अस्", "as", "to be / to become", ["am", "are", "is"], [
-    ["अस्ति", "स्तः", "सन्ति"],
-    ["असि", "स्थः", "स्थ"],
-    ["अस्मि", "स्वः", "स्मः"],
-  ]),
-];
-
-// Example sentences for a verb: every person and number, then every gender of the 3rd person.
-// The owner asked for these "for all verbs", so they're built from each verb's forms.
-export type VerbExample = { deva: string; translit: string; meaning: string; note?: string };
-
-const subjects: { deva: [string, string]; en: string; person: number; number: number; english: 0 | 1 | 2; note?: string }[] = [
-  { deva: ["अहं", "अहम्"], en: "I", person: 2, number: 0, english: 0 },
-  { deva: ["आवां", "आवाम्"], en: "We two", person: 2, number: 1, english: 1 },
-  { deva: ["वयं", "वयम्"], en: "We all", person: 2, number: 2, english: 1 },
-  { deva: ["त्वं", "त्वम्"], en: "You", person: 1, number: 0, english: 1 },
-  { deva: ["युवां", "युवाम्"], en: "You two", person: 1, number: 1, english: 1 },
-  { deva: ["यूयं", "यूयम्"], en: "You all", person: 1, number: 2, english: 1 },
-  { deva: ["सः", "सः"], en: "He", person: 0, number: 0, english: 2, note: "पुल्लिङ्ग - एकवचनम्" },
-  { deva: ["तौ", "तौ"], en: "Those two", person: 0, number: 1, english: 1, note: "पुल्लिङ्ग - द्विवचनम्" },
-  { deva: ["ते", "ते"], en: "They", person: 0, number: 2, english: 1, note: "पुल्लिङ्ग - बहुवचनम्" },
-  { deva: ["सा", "सा"], en: "She", person: 0, number: 0, english: 2, note: "स्त्रीलिङ्ग - एकवचनम्" },
-  { deva: ["ते", "ते"], en: "Those two", person: 0, number: 1, english: 1, note: "स्त्रीलिङ्ग - द्विवचनम्" },
-  { deva: ["ताः", "ताः"], en: "They", person: 0, number: 2, english: 1, note: "स्त्रीलिङ्ग - बहुवचनम्" },
-  { deva: ["तत्", "तत्"], en: "It", person: 0, number: 0, english: 2, note: "नपुंसकलिङ्ग - एकवचनम्" },
-  { deva: ["ते", "ते"], en: "Those two", person: 0, number: 1, english: 1, note: "नपुंसकलिङ्ग - द्विवचनम्" },
-  { deva: ["तानि", "तानि"], en: "They", person: 0, number: 2, english: 1, note: "नपुंसकलिङ्ग - बहुवचनम्" },
-];
-
-export function verbExamples(verb: Conjugation): VerbExample[] {
-  const english = verb.english;
-  if (!english) return [];
-  return subjects.map((s) => {
-    const form = verb.forms[s.person][s.number];
-    // अहं before a consonant, अहम् before a vowel (अहम् अस्मि).
-    const subject = s.deva[/^[अ-औ]/.test(form) ? 1 : 0];
-    const deva = `${subject} ${form}।`;
-    return { deva, translit: toIAST(deva), meaning: `${s.en} ${english[s.english]}.`, note: s.note };
-  });
-}
+// Verbs in all ten lakaras live in ./verbs.ts.
+export { lakaras, persons, verbs, verbExamples, sentence, quizSubjects, sentenceLakaras } from "./verbs";
+export type { Verb, Lakara, LakaraId, Forms, Sentence, Subject } from "./verbs";
 
 export const pronouns = [
   { deva: "अहम्", translit: "aham", meaning: "I" },

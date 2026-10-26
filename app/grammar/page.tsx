@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { PageHeader, SpeakButton, spring, Switch, Tabs } from "@/components/ui";
-import { cases, conjugations, declensions, persons, pronouns, verbExamples } from "@/lib/data";
+import { Chevron, Dropdown, PageHeader, SpeakButton, spring, Switch, Tabs } from "@/components/ui";
+import { cases, declensions, lakaras, persons, pronouns, verbExamples, verbs, type LakaraId } from "@/lib/data";
 
 type Tab = "nouns" | "verbs" | "pronouns";
 const numbers = ["Singular · एकवचनम्", "Dual · द्विवचनम्", "Plural · बहुवचनम्"];
@@ -11,13 +11,18 @@ const numbers = ["Singular · एकवचनम्", "Dual · द्विव�
 export default function GrammarPage() {
   const [tab, setTab] = useState<Tab>("nouns");
   const [nounId, setNounId] = useState(declensions[0].id);
-  const [verbId, setVerbId] = useState(conjugations[0].id);
+  const [verbId, setVerbId] = useState(verbs[0].id);
+  const [lakaraId, setLakaraId] = useState<LakaraId>("lat");
   const [practice, setPractice] = useState(false);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   const noun = declensions.find((d) => d.id === nounId)!;
-  const verb = conjugations.find((c) => c.id === verbId)!;
-  const examples = verbExamples(verb);
+  const verb = verbs.find((c) => c.id === verbId)!;
+  const lakara = lakaras.find((l) => l.id === lakaraId)!;
+  // अस् has no forms outside the present system; भू stands in for it.
+  const shown = verb.forms[lakaraId] ? verb : verbs.find((v) => v.id === "bhu")!;
+  const forms = shown.forms[lakaraId]!;
+  const examples = verbExamples(shown, lakaraId);
 
   const resetReveal = () => setRevealed(new Set());
   const reveal = (id: string) => setRevealed((r) => new Set(r).add(id));
@@ -115,7 +120,7 @@ export default function GrammarPage() {
       {tab === "verbs" && (
         <section className="mt-6">
           <div className="flex flex-wrap gap-2">
-            {conjugations.map((c) => (
+            {verbs.map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -124,73 +129,103 @@ export default function GrammarPage() {
                   resetReveal();
                 }}
                 data-spotlight
-                className={`rounded-2xl border px-4 py-2 text-left ${
+                className={`rounded-2xl border px-3 py-1.5 text-left ${
                   c.id === verbId ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-accent"
                 }`}
               >
-                <span className="deva text-xl">{c.root}</span>{" "}
-                <span className="text-sm italic text-muted">{c.meaning}</span>
-                <span className="block text-xs text-muted">
-                  {c.tense} · <span className="deva">{c.tenseSanskrit}</span>
-                </span>
+                <span className="deva text-lg">{c.root}</span>{" "}
+                <span className="text-xs italic text-muted">{c.meaning}</span>
               </button>
             ))}
           </div>
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead className="bg-surface-2 text-left">
-                <tr>
-                  <th className="px-3 py-2.5 font-medium">Person</th>
-                  {numbers.map((n) => (
-                    <th key={n} className="px-3 py-2.5 font-medium">
-                      {n}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {persons.map((p, i) => (
-                  <tr key={p.name}>
-                    <td className="border-t border-line px-3 py-2.5">
-                      <span className="font-medium">{p.name}</span> <span className="deva text-muted">{p.sanskrit}</span>
-                      <span className="block text-xs text-muted">{p.hint}</span>
-                    </td>
-                    {verb.forms[i].map((f, j) => (
-                      <FormCell key={j} text={f} hidden={practice && !revealed.has(`${verb.id}-${i}-${j}`)} onReveal={() => reveal(`${verb.id}-${i}-${j}`)} />
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Dropdown
+              label="Choose a lakara"
+              triggerClassName="flex min-w-64 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 text-left hover:border-accent aria-expanded:border-accent"
+              trigger={(open) => (
+                <>
+                  <span>
+                    <span className="deva">{lakara.deva}</span> ({lakara.translit}) · {lakara.name}
+                  </span>
+                  <Chevron open={open} />
+                </>
+              )}
+              items={lakaras.map((l) => ({
+                key: l.id,
+                label: (
+                  <>
+                    <span className="deva">{l.deva}</span> ({l.translit}) · {l.name}
+                  </>
+                ),
+                selected: l.id === lakaraId,
+              }))}
+              onSelect={(k) => {
+                setLakaraId(k as LakaraId);
+                resetReveal();
+              }}
+            />
+            <p className="text-sm text-muted">
+              <span className="deva text-ink">{verb.root}</span> <em>{verb.translit}</em> · {verb.meaning}
+            </p>
           </div>
-          <p className="mt-3 text-sm text-muted">
+
+          {verb.note && !verb.forms[lakaraId] && (
+            <p className="mt-3 rounded-2xl bg-surface-2 p-3 text-sm text-muted">
+              {verb.note} The forms below are of <span className="deva text-ink">{shown.root}</span>.
+            </p>
+          )}
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {[2, 1, 0].map((i) => {
+              const p = persons[i];
+              const personExamples = examples.filter((e) => e.person === i);
+              return (
+                <div key={p.name} className="rounded-2xl border border-line bg-surface">
+                  <div className="border-b border-line bg-surface-2 px-4 py-2.5 rounded-t-2xl">
+                    <p className="font-medium">
+                      {p.name} <span className="deva font-normal text-muted">{p.sanskrit}</span>
+                    </p>
+                    <p className="text-xs text-muted">{p.hint}</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {numbers.map((n, j) => (
+                        <tr key={n}>
+                          <td className="w-1/2 border-t border-line px-4 py-2 text-xs text-muted first:border-t-0">{n}</td>
+                          <FormCell text={forms[i][j]} hidden={practice && !revealed.has(`${shown.id}-${lakaraId}-${i}-${j}`)} onReveal={() => reveal(`${shown.id}-${lakaraId}-${i}-${j}`)} />
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {personExamples.length > 0 && (
+                    <ul className="space-y-3 border-t border-line bg-accent-soft/60 p-4 rounded-b-2xl">
+                      {personExamples.map((e) => (
+                        <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
+                          <SpeakButton text={e.deva} />
+                          <div className="min-w-0">
+                            <p className="deva text-lg">{e.deva}</p>
+                            <p className="text-xs italic text-muted">{e.translit}</p>
+                            <p className="text-sm">
+                              {e.meaning}
+                              {e.note && <span className="deva text-muted"> ({e.note})</span>}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 text-sm text-muted">
             Note: Sanskrit has three persons (<span className="deva">पुरुषाः</span>) and three numbers (
             <span className="deva">वचनानि</span>). <span className="deva">प्रथमपुरुषः</span> means 3rd person,{" "}
             <span className="deva">मध्यमपुरुषः</span> 2nd person and <span className="deva">उत्तमपुरुषः</span> 1st person.
-            Each verb has nine forms: three persons × three numbers.
+            Each verb has nine forms in every lakara: three persons × three numbers.
           </p>
-          {examples.length > 0 && (
-            <div className="mt-6 rounded-2xl bg-accent-soft p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-accent">
-                Examples · <span className="deva normal-case">उदाहरणानि</span>
-              </p>
-              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-                {examples.map((e) => (
-                  <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
-                    <SpeakButton text={e.deva} />
-                    <div>
-                      <p className="deva text-xl">{e.deva}</p>
-                      <p className="text-sm italic text-muted">{e.translit}</p>
-                      <p className="text-sm">
-                        {e.meaning}
-                        {e.note && <span className="deva text-muted"> ({e.note})</span>}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </section>
       )}
 

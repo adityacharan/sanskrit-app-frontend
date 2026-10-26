@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Chevron, Dropdown, PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
-import { allLetters, allWords, categories, greetingSentences } from "@/lib/data";
+import { allLetters, allWords, categories, greetingSentences, lakaras, persons, quizSubjects, sentence, sentenceLakaras, verbs } from "@/lib/data";
+import { toIAST } from "@/lib/iast";
 import { actions, useProgress } from "@/lib/progress";
 import { shuffle, speak } from "@/lib/speak";
 
 type Mode = "meaning" | "reverse" | "sound";
-type Item = { id: string; deva: string; translit: string; meaning?: string };
+// `group`: wrong answers are drawn from the same group first (same verb, or same subject and verb).
+type Item = { id: string; deva: string; translit: string; meaning?: string; group?: string };
 type Question = { item: Item; prompt: string; promptIsDeva: boolean; options: string[]; answer: string; optionsAreDeva: boolean };
 
 const sources = [
@@ -16,7 +18,42 @@ const sources = [
   { value: "alphabet", label: "अ Alphabet" },
   { value: "greeting-sentences", label: "💬 Greeting sentences" },
   ...categories.map((c) => ({ value: c.slug, label: `${c.icon} ${c.title}` })),
+  ...lakaras.map((l) => ({ value: `verbs:${l.id}`, label: `🏃 Verbs · ${l.deva} ${l.name}` })),
+  { value: "sentences", label: "✍️ Sentences" },
 ];
+
+const numberNames = ["singular", "dual", "plural"];
+
+// Every form of every verb in one lakara.
+function verbFormsFor(lakaraId: string): Item[] {
+  const lakara = lakaras.find((l) => l.id === lakaraId);
+  if (!lakara) return [];
+  return verbs.flatMap((v) => {
+    const forms = v.forms[lakara.id];
+    if (!forms) return [];
+    return forms.flatMap((row, p) =>
+      row.map((deva, n) => ({
+        id: `${v.id}:${lakara.id}:${p}:${n}`,
+        deva,
+        translit: toIAST(deva),
+        meaning: `${v.meaning} · ${persons[p].name} · ${numberNames[n]}`,
+        group: v.id,
+      })),
+    );
+  });
+}
+
+// Sentences with nouns and pronouns in लट्, लृट्, लङ्, लोट् and विधिलिङ्.
+function sentencesPool(): Item[] {
+  return verbs.flatMap((v) =>
+    quizSubjects.flatMap((s, i) =>
+      sentenceLakaras.flatMap((l) => {
+        const x = sentence(v, l, s);
+        return x ? [{ id: `${v.id}:${l}:${i}`, deva: x.deva, translit: x.translit, meaning: x.meaning, group: `${v.id}:${i}` }] : [];
+      }),
+    ),
+  );
+}
 
 const modes: { value: Mode; label: string; needsMeaning: boolean }[] = [
   { value: "meaning", label: "Sanskrit → English", needsMeaning: true },
@@ -28,6 +65,8 @@ function poolFor(source: string): Item[] {
   if (source === "alphabet") return allLetters;
   if (source === "greeting-sentences") return greetingSentences;
   if (source === "all") return allWords;
+  if (source.startsWith("verbs:")) return verbFormsFor(source.slice(6));
+  if (source === "sentences") return sentencesPool();
   return categories.find((c) => c.slug === source)?.words ?? allWords;
 }
 
@@ -40,7 +79,11 @@ function buildQuestions(source: string, mode: Mode, count = 10): Question[] {
     .slice(0, Math.min(count, pool.length))
     .map((item) => {
       const answer = field(item);
-      const distractors = shuffle([...new Set(pool.map(field))].filter((v) => v !== answer)).slice(0, 3);
+      const near = item.group ? pool.filter((o) => o.group === item.group) : [];
+      const pick = (from: Item[], taken: string[]) =>
+        shuffle([...new Set(from.map(field))].filter((v) => v !== answer && !taken.includes(v)));
+      const distractors = pick(near, []).slice(0, 3);
+      if (distractors.length < 3) distractors.push(...pick(pool, distractors).slice(0, 3 - distractors.length));
       return {
         item,
         prompt: mode === "reverse" ? item.meaning! : item.deva,

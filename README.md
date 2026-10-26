@@ -19,9 +19,9 @@ Visitors are sent to `/login` first. Clicking **Login** sets a `sanskrit_session
 | Login | `/login` | Placeholder sign-in screen with a single **Login** button (no credentials). Every page redirects here until you log in. |
 | Home | `/` | Level/XP/streak stats, learning path, and per-category progress. |
 | Alphabet | `/alphabet` | Vowels, and consonants grouped as the five vargas, the semivowels and the sibilants. Tap a letter to hear it and see an example word. |
-| Vocabulary | `/vocabulary` | Flashcards in 8 categories (greetings, good manners, numbers, family, nature, animals, body, verbs). Tap to flip, swipe to move on, mark words as learned. |
-| Quiz | `/quiz` | 10-question multiple choice on words, letters or greeting sentences: Sanskrit → English, English → Sanskrit, or script → romanization. Keys `1`–`4` answer, `Enter` continues. |
-| Grammar | `/grammar` | Noun declensions (राम, फल, लता), present-tense conjugations of 20 dhatus with example sentences for each (plus पठ् in the past and future) and pronouns, with a practice mode that hides forms until you tap them. |
+| Vocabulary | `/vocabulary` | Flashcards in 7 categories (greetings, good manners, numbers 1–100, family, nature, animals, body). Tap to flip, swipe to move on, mark words as learned. Numbers end with the Līlāvatī shloka and the names of the powers of ten. |
+| Quiz | `/quiz` | 10-question multiple choice on words, letters, greeting sentences, verb forms (one section per lakara) or sentences: Sanskrit → English, English → Sanskrit, or script → romanization. Keys `1`–`4` answer, `Enter` continues. |
+| Grammar | `/grammar` | Noun declensions (राम, फल, लता), 31 verbs in all ten lakaras (लट् … लृङ्) shown person by person with example sentences, and pronouns, with a practice mode that hides forms until you tap them. |
 | Phrases | `/phrases` | Everyday sentences and five shlokas. Romanization and meaning can be switched on and off. |
 
 Pronunciation uses the browser's built-in speech synthesis with a Hindi voice, because Sanskrit voices are rare. If your system has no Hindi voice, the speaker buttons do nothing.
@@ -87,8 +87,9 @@ lib/
 Everything lives in [`lib/data.ts`](lib/data.ts):
 
 - **Words:** add a row to a category in `categories` as `[devanagari, romanization, meaning]`, or add a whole new category with `cat(...)`. Quizzes and progress pick it up automatically.
+- **Numbers:** `numberRows` holds 1–100 in order (the row index is the number). `largeNumbers` is the powers-of-ten table shown under the list.
 - **Letters:** add to `vowels` or `consonants`.
-- **Grammar:** add to `declensions` (8 cases × 3 numbers) or `conjugations` (3 persons × 3 numbers).
+- **Grammar:** add to `declensions` (8 cases × 3 numbers). Verbs are in [`lib/verbs.ts`](lib/verbs.ts): give `verb(...)` the stems and it builds all ten lakaras (3 persons × 3 numbers each); irregular tables are written out in full.
 - **Phrases and verses:** add to `phrases` or `shlokas`.
 
 Romanization uses IAST (ā, ī, ū, ṛ, ṃ, ḥ, ś, ṣ, ṭ, ḍ, ṇ, ñ, ṅ).
