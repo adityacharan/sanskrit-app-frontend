@@ -28,6 +28,8 @@ function Vocabulary() {
   const learned = new Set(progress.learned);
 
   const word = category.words[Math.min(index, category.words.length - 1)];
+  // One text size for the whole deck, so cards don't change size as you swipe.
+  const cardSize = category.words.some((w) => w.deva.length > 12) ? "text-4xl" : "text-6xl";
   const done = category.words.filter((w) => learned.has(w.id)).length;
 
   const go = (delta: number) => {
@@ -80,6 +82,7 @@ function Vocabulary() {
             <Flashcard
               key={word.id}
               word={word}
+              size={cardSize}
               dir={dir}
               learned={learned.has(word.id)}
               flipped={flipped}
@@ -132,6 +135,9 @@ function Vocabulary() {
       <h2 className="mb-3 mt-12 text-xl font-semibold">
         All words · <span className="deva text-accent">{category.sanskrit}</span>
       </h2>
+      {category.words[0]?.note && (
+        <p className="mb-3 rounded-2xl bg-surface-2 p-3 text-sm text-muted">Note: {category.words[0].note}</p>
+      )}
       <div className="grid gap-2 sm:grid-cols-2">
         {category.words.map((w, i) => (
           <div
@@ -144,17 +150,22 @@ function Vocabulary() {
             <SpeakButton text={w.deva} />
             <button
               type="button"
-              className="min-w-0 flex-1 text-left"
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
               onClick={() => {
                 setPage([i, i > index ? 1 : -1]);
                 setFlipped(false);
               }}
             >
-              {w.numeral && <span className="deva mr-2 rounded-md bg-surface-2 px-1.5 text-sm text-muted">{w.numeral}</span>}
-              <span className="deva text-xl">{w.deva}</span>{" "}
-              <span className="text-sm italic text-muted">{w.translit}</span>
-              <span className="block text-sm">{w.meaning}</span>
-              {w.note && <span className="mt-1 block text-xs text-muted">Note: {w.note}</span>}
+              {w.numeral && (
+                <span className="w-16 shrink-0 rounded-lg bg-surface-2 py-1 text-center text-sm text-muted">
+                  <Numeral value={w.numeral} />
+                </span>
+              )}
+              <span className="min-w-0">
+                <span className="deva text-xl">{w.deva}</span>{" "}
+                <span className="text-sm italic text-muted">{w.translit}</span>
+                <span className="block text-sm">{w.meaning}</span>
+              </span>
             </button>
             <input
               type="checkbox"
@@ -228,10 +239,21 @@ function LargeNumbers() {
   );
 }
 
+// "१ (1)": the Devanagari digits in the Sanskrit font, the Western digits in the UI font.
+function Numeral({ value }: { value: string }) {
+  const [deva, latin] = value.split(" ");
+  return (
+    <>
+      <span className="deva">{deva}</span> <span className="tabular-nums">{latin}</span>
+    </>
+  );
+}
+
 const SWIPE_DISTANCE = 110;
 
 function Flashcard({
   word,
+  size,
   dir,
   learned,
   flipped,
@@ -239,6 +261,7 @@ function Flashcard({
   onSwipe,
 }: {
   word: Word;
+  size: string;
   dir: number;
   learned: boolean;
   flipped: boolean;
@@ -286,14 +309,16 @@ function Flashcard({
       >
         <div className="flip-face absolute inset-0 flex select-none flex-col items-center justify-center rounded-3xl border border-line bg-surface p-6 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.2)]">
           {word.numeral && (
-            <span className="deva absolute left-4 top-4 rounded-full bg-surface-2 px-2.5 py-0.5 text-sm text-muted">{word.numeral}</span>
+            <span className="absolute left-4 top-4 rounded-full bg-surface-2 px-2.5 py-0.5 text-sm text-muted">
+              <Numeral value={word.numeral} />
+            </span>
           )}
           {learned && (
             <span className="absolute right-4 top-4 rounded-full bg-good-soft px-2.5 py-0.5 text-xs font-medium text-good">
               ✓ Learned
             </span>
           )}
-          <p className={`deva text-center ${word.deva.length > 12 ? "text-4xl" : "text-6xl"}`}>{word.deva}</p>
+          <p className={`deva text-center ${size}`}>{word.deva}</p>
           <p className="mt-3 text-center text-lg italic text-muted">{word.translit}</p>
           <p className="absolute bottom-4 text-xs text-muted">Tap to flip · swipe for next</p>
         </div>

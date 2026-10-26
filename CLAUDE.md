@@ -27,7 +27,8 @@ Next.js 16 web app for learning Sanskrit (alphabet, vocabulary, grammar, phrases
   - **The doc's 17 greeting sentences** (`greetingSentences`) are a quiz source, "Greeting sentences". The doc asked for them "as Quiz", so they aren't shown on the Phrases page. The stray "।," in सुप्रभातम्, मान्ये। was fixed. Long quiz prompts use a smaller font so sentences fit on a phone.
 - **A third owner document, `P-2_Numbers .docx`** (parent folder; its instructions are in romanized Telugu), replaced the Numbers vocabulary:
   - **Numbers 1–100** are `numberRows` in `lib/data.ts`, in the doc's order and spelling (it writes षड् विंशतिः, षट् त्रिंशत् with a space; keep that). Word IDs are `numbers:<n>`, not slug:translit, because 1–4 have three forms. Each word carries `numeral` ("१ (1)"), shown on the card and in the list.
-  - **1–4 have masculine / feminine / neuter forms** (एकः / एका / एकम्) and only those four carry the doc's gender `note`, as it asked ("1 nundi 4 varaku"). It shows on the card back and in the word list.
+  - **1–4 have masculine / feminine / neuter forms** (एकः / एका / एकम्) and only those four carry the doc's gender `note`, as it asked ("1 nundi 4 varaku"). It shows on their card backs and once above the word list, not on each row: repeating it made rows 1–4 much taller than the rest.
+  - The numeral sits in a fixed-width badge (`Numeral`): the Devanagari digit in Tiro and "(n)" in Inter. Tiro's Western digits looked oversized.
   - Corrections made to the doc: 54's romanization catuḥpañcāśat → catuṣpañcāśat to match चतुष्पञ्चाशत्; the alternate forms for 19, 29, … 99 (एकोनविंशतिः etc.) were given romanizations the doc lacked and written as one word (the doc had एकोन विंशतिः but एकोनाशीतिः); two typos in the shloka (शंत → शत, लक्श → लक्ष). Every romanization was checked against `toIAST()`.
   - **The quiz** needs no new code: the Numbers category is already a source. "All words" now contains 100 numbers out of about 170 words, so it leans heavily on numbers; the owner hasn't said whether to exclude them.
   - **`largeNumbers`** (the shloka from the Līlāvatī, the "Based on this shloka … Bhaskaracharya" line and the 10¹–10¹⁷ table) renders in `LargeNumbers` at the bottom of the Numbers vocabulary page, under the word list, as the doc asked ("numbers ki krindi"). The table's English keeps the doc's crore/lakh and million/billion pairs.
@@ -69,6 +70,8 @@ npm run typecheck
 - **Buttons must be simple and steady.** The owner found magnetic buttons, tilting cards, the quiz answer shake/pop and the XP badge bounce "too shaky", so they were removed. Button feedback is the instant press scale plus hover color/border changes only. Don't add motion that moves buttons around under the cursor.
 
 ## Pitfalls already hit
+
+- **Text sizes must match across a set.** The owner noticed "the letters sizes are not equal". A flashcard deck uses one size for every card (`cardSize`: 4xl if any word in the category is over 12 characters, else 6xl), and a quiz uses one prompt size for all ten questions (`promptSize`). Never size a card or prompt by its own length. Verb chips match the noun chips (root text-xl, romanization text-sm, meaning text-xs). Example sentences are text-xl / text-sm everywhere. Grid columns of unequal content need `items-start`, or short blocks stretch into empty boxes. Check with screenshots at deviceScaleFactor 2 before committing.
 
 - **Word IDs are `${slug}:${translit}`**, and learned progress stores those IDs in `localStorage`. Renaming or moving a word leaves its old ID behind, so count learned words against `allWords` (as Home and the account menu do), never `progress.learned.length`.
 

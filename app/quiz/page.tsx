@@ -271,6 +271,8 @@ export default function QuizPage() {
 
   // ---------- Question screen
   const q = questions[current];
+  // One prompt size for the whole quiz, so it doesn't jump between questions.
+  const promptSize = questions.some((x) => x.promptIsDeva && x.prompt.length > 12) ? "text-4xl" : "text-6xl";
   return (
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-4">
@@ -293,7 +295,7 @@ export default function QuizPage() {
             initial={{ opacity: 0, scale: 0.9, filter: "blur(6px)" }}
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             transition={spring}
-            className={q.promptIsDeva ? (q.prompt.length > 12 ? "deva text-4xl" : "deva text-6xl") : "text-3xl font-semibold"}
+            className={q.promptIsDeva ? `deva ${promptSize}` : "text-3xl font-semibold"}
           >
             {q.prompt}
           </motion.p>

@@ -129,12 +129,13 @@ export default function GrammarPage() {
                   resetReveal();
                 }}
                 data-spotlight
-                className={`rounded-2xl border px-3 py-1.5 text-left ${
+                className={`rounded-2xl border px-4 py-2 text-left ${
                   c.id === verbId ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-accent"
                 }`}
               >
-                <span className="deva text-lg">{c.root}</span>{" "}
-                <span className="text-xs italic text-muted">{c.meaning}</span>
+                <span className="deva text-xl">{c.root}</span>{" "}
+                <span className="text-sm italic text-muted">{c.translit}</span>
+                <span className="block text-xs text-muted">{c.meaning}</span>
               </button>
             ))}
           </div>
@@ -176,13 +177,13 @@ export default function GrammarPage() {
             </p>
           )}
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
             {[2, 1, 0].map((i) => {
               const p = persons[i];
               const personExamples = examples.filter((e) => e.person === i);
               return (
                 <div key={p.name} className="rounded-2xl border border-line bg-surface">
-                  <div className="border-b border-line bg-surface-2 px-4 py-2.5 rounded-t-2xl">
+                  <div className="rounded-t-2xl bg-surface-2 px-4 py-2.5">
                     <p className="font-medium">
                       {p.name} <span className="deva font-normal text-muted">{p.sanskrit}</span>
                     </p>
@@ -192,7 +193,7 @@ export default function GrammarPage() {
                     <tbody>
                       {numbers.map((n, j) => (
                         <tr key={n}>
-                          <td className="w-1/2 border-t border-line px-4 py-2 text-xs text-muted first:border-t-0">{n}</td>
+                          <td className="w-1/2 border-t border-line px-4 py-2.5 text-muted">{n}</td>
                           <FormCell text={forms[i][j]} hidden={practice && !revealed.has(`${shown.id}-${lakaraId}-${i}-${j}`)} onReveal={() => reveal(`${shown.id}-${lakaraId}-${i}-${j}`)} />
                         </tr>
                       ))}
@@ -204,8 +205,8 @@ export default function GrammarPage() {
                         <li key={`${e.deva}-${e.note ?? ""}`} className="flex items-start gap-3">
                           <SpeakButton text={e.deva} />
                           <div className="min-w-0">
-                            <p className="deva text-lg">{e.deva}</p>
-                            <p className="text-xs italic text-muted">{e.translit}</p>
+                            <p className="deva text-xl">{e.deva}</p>
+                            <p className="text-sm italic text-muted">{e.translit}</p>
                             <p className="text-sm">
                               {e.meaning}
                               {e.note && <span className="deva text-muted"> ({e.note})</span>}
