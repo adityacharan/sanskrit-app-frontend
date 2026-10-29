@@ -22,6 +22,10 @@ export const lakaras: Lakara[] = [
   { id: "lrng", deva: "लृङ्", translit: "Lṛṅ", name: "Conditional Mood", hint: "he would have read" },
 ];
 
+// The Grammar page shows these five (General Update_1); the other five are in Advanced Grammar.
+export const basicLakaras: LakaraId[] = ["lat", "lrt", "lang", "lot", "vidhiling"];
+export const advancedLakaras: LakaraId[] = ["lit", "lut", "ashirling", "lung", "lrng"];
+
 export const persons = [
   { name: "3rd person", sanskrit: "प्रथमपुरुषः", hint: "he / she / they" },
   { name: "2nd person", sanskrit: "मध्यमपुरुषः", hint: "you" },

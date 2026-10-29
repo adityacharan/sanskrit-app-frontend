@@ -9,7 +9,8 @@ const sections = [
   { href: "/alphabet", title: "Alphabet", deva: "वर्णमाला", desc: "Vowels and consonants of Devanagari with sounds.", icon: "अ" },
   { href: "/vocabulary", title: "Vocabulary", deva: "शब्दाः", desc: "Flashcards across greetings, numbers, family, nature and more.", icon: "📖" },
   { href: "/quiz", title: "Quiz", deva: "परीक्षा", desc: "Test yourself and earn XP for every correct answer.", icon: "🎯" },
-  { href: "/grammar", title: "Grammar", deva: "व्याकरणम्", desc: "Noun cases, verb tenses and pronouns in clear tables.", icon: "📐" },
+  { href: "/grammar", title: "Grammar", deva: "व्याकरणम्", desc: "Noun cases, verbs in five lakaras and pronouns in clear tables.", icon: "📐" },
+  { href: "/advanced", title: "Advanced Grammar", deva: "उन्नतव्याकरणम्", desc: "The other five lakaras, large numbers and ordinal numbers.", icon: "🎓" },
   { href: "/phrases", title: "Phrases & Shlokas", deva: "वाक्यानि", desc: "Everyday sentences and famous verses with meanings.", icon: "💬" },
 ];
 

@@ -13,6 +13,7 @@
   --gold: #a16207;
   --good: #15803d;
   --good-soft: #dcfce7;
+  --good-ink: #ffffff;
   --bad: #b91c1c;
   --bad-soft: #fee2e2;
 }
@@ -31,6 +32,7 @@
     --gold: #facc15;
     --good: #4ade80;
     --good-soft: #14321f;
+    --good-ink: #052e16;
     --bad: #f87171;
     --bad-soft: #3b1717;
   }
@@ -49,6 +51,7 @@
   --color-gold: var(--gold);
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
+  --color-good-ink: var(--good-ink);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
   --font-sans: var(--font-inter), var(--font-tiro), system-ui, sans-serif;
@@ -192,3 +195,7 @@ body {
   a:active,
   [role="button"]:active { scale: 1; }
 }
+
+/* One-line word previews scroll sideways without a visible scrollbar. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

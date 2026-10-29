@@ -41,6 +41,16 @@ export const vowels: LetterGroup[] = [
       L("ऐ", "ai", "ai in 'aisle'", ["ऐरावतः", "airāvataḥ", "Indra's elephant"]),
       L("ओ", "o", "o in 'go'", ["ओष्ठः", "oṣṭhaḥ", "lip"]),
       L("औ", "au", "ow in 'cow'", ["औषधम्", "auṣadham", "medicine"]),
+    ],
+  },
+];
+
+// Anusvāra and visarga: not vowels (the owner's General Update_1 removed them from the vowels).
+export const ayogavahas: LetterGroup[] = [
+  {
+    name: "Anusvāra & visarga",
+    sanskrit: "अयोगवाहौ",
+    letters: [
       L("अं", "aṃ", "nasal hum (anusvāra)", ["अंशः", "aṃśaḥ", "portion"]),
       L("अः", "aḥ", "breathy echo (visarga)", ["दुःखम्", "duḥkham", "sorrow"]),
     ],
@@ -125,7 +135,7 @@ export const consonants: LetterGroup[] = [
   },
 ];
 
-export const allLetters: Letter[] = [...vowels, ...consonants].flatMap(
+export const allLetters: Letter[] = [...vowels, ...ayogavahas, ...consonants].flatMap(
   (g) => g.letters,
 );
 
@@ -171,8 +181,15 @@ const cat = (
 
 // Numbers 1–100 from the owner's P-2_Numbers document, in its order and spelling.
 // 1–4 change with the gender of the noun (masculine / feminine / neuter); 5 onwards don't.
-const genderNote =
-  "The forms of Sanskrit numbers for 1–4 can vary according to the gender of the noun being counted. For example, एकः बालकः, एका बालिका, एकं फलम्. Numbers from 5 onwards there are no gender differences.";
+// Each of 1–4 gets its own example (masculine, feminine, neuter), as the Ordinal Numbers document asked.
+const genderExamples = [
+  "एकः बालकः, एका बालिका, एकं फलम्",
+  "द्वौ बालकौ, द्वे बालिके, द्वे फले",
+  "त्रयः बालकाः, तिस्रः बालिकाः, त्रीणि फलानि",
+  "चत्वारः बालकाः, चतस्रः बालिकाः, चत्वारि फलानि",
+];
+const genderNote = (n: number) =>
+  `The forms of Sanskrit numbers for 1–4 can vary according to the gender of the noun being counted. For example, ${genderExamples[n - 1]}. Numbers from 5 onwards there are no gender differences.`;
 
 const numberRows: [string, string, string][] = [
   ["एकः / एका / एकम्", "ekaḥ / ekā / ekam", "one"],
@@ -293,7 +310,7 @@ const numbers: Category = {
       meaning,
       category: "numbers",
       numeral: `${toDevaDigits(n)} (${n})`,
-      note: n <= 4 ? genderNote : undefined,
+      note: n <= 4 ? genderNote(n) : undefined,
     };
   }),
 };
@@ -498,20 +515,10 @@ export const declensions: Declension[] = [
 ];
 
 // Verbs in all ten lakaras live in ./verbs.ts.
-export { lakaras, persons, verbs, verbExamples, sentence, quizSubjects, sentenceLakaras } from "./verbs";
+export { lakaras, basicLakaras, advancedLakaras, persons, verbs, verbExamples, sentence, quizSubjects, sentenceLakaras } from "./verbs";
+export { ordinals, type Ordinal } from "./ordinals";
+export { pronounList, pronounSections, genderNames, type Pronoun, type Gender } from "./pronouns";
 export type { Verb, Lakara, LakaraId, Forms, Sentence, Subject } from "./verbs";
-
-export const pronouns = [
-  { deva: "अहम्", translit: "aham", meaning: "I" },
-  { deva: "आवाम्", translit: "āvām", meaning: "we two" },
-  { deva: "वयम्", translit: "vayam", meaning: "we" },
-  { deva: "त्वम्", translit: "tvam", meaning: "you" },
-  { deva: "युवाम्", translit: "yuvām", meaning: "you two" },
-  { deva: "यूयम्", translit: "yūyam", meaning: "you all" },
-  { deva: "सः", translit: "saḥ", meaning: "he" },
-  { deva: "सा", translit: "sā", meaning: "she" },
-  { deva: "तत्", translit: "tat", meaning: "it" },
-];
 
 // ---------------------------------------------------------------- phrases
 

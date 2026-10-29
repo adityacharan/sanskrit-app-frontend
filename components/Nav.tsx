@@ -16,6 +16,7 @@ export const links = [
   { href: "/vocabulary", label: "Words", deva: "शब्दाः", icon: "📖" },
   { href: "/quiz", label: "Quiz", deva: "परीक्षा", icon: "🎯" },
   { href: "/grammar", label: "Grammar", deva: "व्याकरणम्", icon: "📐" },
+  { href: "/advanced", label: "Advanced", deva: "उन्नतव्याकरणम्", icon: "🎓" },
   { href: "/phrases", label: "Phrases", deva: "वाक्यानि", icon: "💬" },
 ];
 
@@ -38,7 +39,7 @@ export default function Nav() {
             संस्कृतम्
           </Link>
 
-          <nav className="hidden flex-1 items-center gap-1 sm:flex" onPointerLeave={() => setHovered(null)}>
+          <nav className="hidden flex-1 items-center gap-1 md:flex" onPointerLeave={() => setHovered(null)}>
             {links.slice(1).map((l) => {
               const active = isActive(l.href);
               return (
@@ -46,7 +47,7 @@ export default function Nav() {
                   key={l.href}
                   href={l.href}
                   onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(l.href)}
-                  className={`relative rounded-full px-3 py-1.5 text-sm ${active ? "font-medium text-accent" : "text-muted hover:text-ink"}`}
+                  className={`relative whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${active ? "font-medium text-accent" : "text-muted hover:text-ink"}`}
                 >
                   <AnimatePresence>
                     {hovered === l.href && !active && (
@@ -69,15 +70,15 @@ export default function Nav() {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 text-sm sm:ml-0">
-            <span className="hidden rounded-full bg-surface-2 px-2.5 py-1 tabular-nums sm:inline" title="Daily streak">
+          <div className="ml-auto flex items-center gap-2 text-sm md:ml-0">
+            <span className="hidden whitespace-nowrap rounded-full bg-surface-2 px-2.5 py-1 tabular-nums lg:inline" title="Daily streak">
               🔥 {streak}
             </span>
             <Dropdown
               label="Account menu"
               kind="menu"
               align="end"
-              triggerClassName="flex items-center gap-2 rounded-full bg-surface-2 py-1 pl-2.5 pr-1 hover:bg-line/60"
+              triggerClassName="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-surface-2 py-1 pl-2.5 pr-1 hover:bg-line/60"
               trigger={() => (
                 <>
                   <span className="tabular-nums">⭐ {xp}</span>
@@ -114,14 +115,14 @@ export default function Nav() {
       </header>
 
       {/* Mobile tab bar */}
-      <nav className="material-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line/60 pb-[env(safe-area-inset-bottom)] sm:hidden">
+      <nav className="material-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 border-t border-line/60 pb-[env(safe-area-inset-bottom)] md:hidden">
         {links.map((l) => {
           const active = isActive(l.href);
           return (
             <Link
               key={l.href}
               href={l.href}
-              className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] ${active ? "text-accent" : "text-muted"}`}
+              className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] ${active ? "text-accent" : "text-muted"}`}
             >
               {active && (
                 <motion.span layoutId="tab-active" className="absolute inset-x-2 inset-y-1 rounded-xl bg-accent-soft" transition={spring} />
