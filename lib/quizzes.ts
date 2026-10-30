@@ -1,28 +1,30 @@
 // The quiz series (General Update_1): every topic is split into parts of 10 marks that between them
 // ask every item, and finishing all of a topic's parts unlocks a 20-mark Grand Test over the whole topic.
+// General Update_2 changed some topics: verbs, pronouns and nouns ask only the word, with Sanskrit options
+// and no repeated question (`marks` parts and named `grands`); the everyday sentences are built from word tiles.
 
 import {
   allLetters,
   cases,
   categories,
-  declensions,
   greetingSentences,
   lakaras,
   largeNumbers,
+  nounClasses,
+  nounGenders,
   ordinals,
+  persons,
   pronounList,
-  pronounSections,
   quizSubjects,
   sentence,
   sentenceLakaras,
+  spokenGroups,
   verbs,
-  type LakaraId,
 } from "./data";
-import { basicLakaras, advancedLakaras } from "./verbs";
 import { shuffle } from "./speak";
 import { toIAST } from "./iast";
 
-export type Mode = "meaning" | "reverse" | "sound";
+export type Mode = "meaning" | "reverse" | "sound" | "form" | "toEnglish" | "toSanskrit";
 export type QItem = {
   id: string;
   deva: string;
@@ -30,8 +32,17 @@ export type QItem = {
   meaning?: string;
   context?: string; // shown above the question, e.g. "पठ् · लट्"
   group?: string; // wrong answers come from the same group first
+  cells?: string[]; // the table cells this form fills: a wrong answer can't name any of them
 };
-export type Part = { id: string; title: string; subtitle?: string; items: QItem[] };
+export type Part = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  items: QItem[];
+  /** Set: the test asks this many items drawn from `items`, never the same word twice. */
+  marks?: number;
+  pool?: QItem[]; // wrong answers for this part only (defaults to the topic's)
+};
 export type Topic = {
   id: string;
   group: GroupId;
@@ -42,11 +53,15 @@ export type Topic = {
   parts: Part[];
   items: QItem[];
   pool?: QItem[]; // wrong answers are drawn from here (defaults to items)
+  grands?: Part[]; // named Grand Tests (default: one 20-mark test over the whole topic)
 };
 export type GroupId = "alphabet" | "words" | "phrases" | "grammar" | "advanced";
 
 export const PART_MARKS = 10;
 export const GRAND_MARKS = 20;
+const FORM_TEST_MARKS = 20; // a verb, pronoun or noun test
+const FORM_GRAND_MARKS = 30;
+export const GRAND = "grand";
 
 export const groups: { id: GroupId; title: string; deva: string }[] = [
   { id: "alphabet", title: "Alphabet", deva: "वर्णमाला" },
@@ -60,6 +75,9 @@ export const modeLabels: Record<Mode, string> = {
   meaning: "Sanskrit → English",
   reverse: "English → Sanskrit",
   sound: "Script → Romanization",
+  form: "Identify the form",
+  toEnglish: "Sanskrit → English",
+  toSanskrit: "English → Sanskrit",
 };
 const ALL_MODES: Mode[] = ["meaning", "reverse", "sound"];
 
@@ -90,58 +108,98 @@ function numberedParts(prefix: string, items: QItem[], label: (it: QItem) => str
   }));
 }
 
-// A table of forms becomes one item per distinct form; a form that fills several cells
-// (रामौ is nominative and accusative dual) is one item whose meaning names all of them.
-function formItems(
-  idPrefix: string,
-  cells: { deva: string; row: string; col: string }[],
-  context: string,
-  group: string,
-): QItem[] {
-  const byForm = new Map<string, { row: string; col: string }[]>();
+// A table of forms becomes one item per distinct word; a word that fills several cells (रामौ is
+// nominative and accusative dual) is one item whose answer names all of them. A cell with two
+// forms (मत्यै / मतये) gives two words. The answers are in Sanskrit.
+function formItems(idPrefix: string, cells: { deva: string; row: string; col: string }[], group: string): QItem[] {
+  const byForm = new Map<string, Map<string, string[]>>();
   for (const c of cells) {
     if (c.deva === "—") continue;
-    byForm.set(c.deva, [...(byForm.get(c.deva) ?? []), { row: c.row, col: c.col }]);
+    for (const deva of c.deva.split(" / ")) {
+      const cols = byForm.get(deva) ?? new Map<string, string[]>();
+      const rows = cols.get(c.col) ?? [];
+      if (!rows.includes(c.row)) rows.push(c.row);
+      byForm.set(deva, cols.set(c.col, rows));
+    }
   }
-  return [...byForm].map(([deva, where], i) => {
-    const sameCol = where.every((w) => w.col === where[0].col);
-    const meaning = sameCol
-      ? `${where.map((w) => w.row).join(" / ")} · ${where[0].col}`
-      : where.map((w) => `${w.row} · ${w.col}`).join(" / ");
-    return { id: `${idPrefix}:${i}`, deva, translit: toIAST(deva), meaning, context, group };
-  });
+  return [...byForm].map(([deva, cols], i) => ({
+    id: `${idPrefix}:${i}`,
+    deva,
+    translit: toIAST(deva),
+    meaning: [...cols].map(([col, rows]) => `${rows.join(", ")} · ${col}`).join(" / "),
+    group,
+    cells: [...cols].flatMap(([col, rows]) => rows.map((row) => `${row} · ${col}`)),
+  }));
 }
 
-const numberNames = ["singular", "dual", "plural"];
-const personShort = ["3rd", "2nd", "1st"];
+/** A test that draws `marks` different words; smaller if the items don't have that many. */
+function formPart(id: string, title: string, subtitle: string | undefined, items: QItem[], marks: number, pool?: QItem[]): Part {
+  return { id, title, subtitle, items, marks: Math.min(marks, new Set(items.map((i) => i.deva)).size), pool };
+}
+
+const numberNames = ["एकवचनम्", "द्विवचनम्", "बहुवचनम्"];
 
 // ---------------------------------------------------------------- topics
 
 const sup = (n: number) => String(n).replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(d)]);
 
-function verbTopic(lakaraId: LakaraId, group: GroupId): Topic {
-  const lakara = lakaras.find((l) => l.id === lakaraId)!;
-  const parts: Part[] = [];
-  for (const v of verbs) {
-    const forms = v.forms[lakaraId];
-    if (!forms) continue; // अस् has no forms in this lakara
-    const cells = forms.flatMap((row, p) => row.map((deva, n) => ({ deva, row: personShort[p], col: numberNames[n] })));
-    // "3rd / 1st person · singular" reads better than "3rd · singular / 1st · singular".
-    const items = formItems(`${lakaraId}:${v.id}`, cells, `${v.root} · ${lakara.deva}`, v.id).map((it) => ({
-      ...it,
-      meaning: it.meaning!.replace(/(\d(?:st|nd|rd)) · /g, "$1 person · "),
-    }));
-    parts.push({ id: v.id, title: `${v.root}`, subtitle: v.meaning, items });
-  }
+// Only the verbs whose stem changes from lakara to lakara (गच्छति, गमिष्यति, जगाम), which is what the
+// owner wants to show: पठति, पठिष्यति, हसति, हसिष्यति and the like just change their endings.
+const changingVerbs = ["likh", "gam", "agam", "pa", "drs", "vad", "nrt", "nam", "smr", "kr", "stha", "ni", "bhu", "vas", "pac", "tyaj", "is", "ji", "sru", "da"].map(
+  (id) => verbs.find((v) => v.id === id)!,
+);
+
+function verbsTopic(): Topic {
+  // One test per lakara: one question per verb, answered with the person and number.
+  const parts = lakaras.map((l) => {
+    const items = changingVerbs.flatMap((v) =>
+      formItems(
+        `${l.id}:${v.id}`,
+        v.forms[l.id]!.flatMap((row, p) => row.map((deva, n) => ({ deva, row: persons[p].sanskrit, col: numberNames[n] }))),
+        v.id,
+      ),
+    );
+    return formPart(l.id, l.deva, l.name.replace(/ \(.*\)$/, ""), items, changingVerbs.length, items);
+  });
+
+  // Three Grand Tests over all the lakaras, one for each person, so no question repeats between them.
+  // The answer is the lakara; a form two lakaras share can't be asked.
+  const inLakaras = (v: (typeof verbs)[number], deva: string) => lakaras.filter((l) => v.forms[l.id]!.flat().includes(deva));
+  const pool: QItem[] = changingVerbs.flatMap((v) =>
+    lakaras.flatMap((l) =>
+      v.forms[l.id]!.flat()
+        .filter((deva) => inLakaras(v, deva).length === 1)
+        .map((deva) => ({ id: `grand:${v.id}:${l.id}:${deva}`, deva, translit: toIAST(deva), meaning: l.deva })),
+    ),
+  );
+  const grands = [0, 1, 2].map((person, g) => {
+    const items: QItem[] = [];
+    for (let q = 0; q < FORM_GRAND_MARKS; q++) {
+      const v = changingVerbs[q % changingVerbs.length];
+      // Every verb, every lakara equally; the number and lakara move on so a verb's second question differs.
+      const start = q + g * 3 + Math.floor(q / changingVerbs.length) * 5;
+      for (let tryNo = 0; tryNo < lakaras.length * 3; tryNo++) {
+        const l = lakaras[(start + Math.floor(tryNo / 3)) % lakaras.length];
+        const deva = v.forms[l.id]![person][(q + tryNo) % 3];
+        if (inLakaras(v, deva).length === 1 && !items.some((i) => i.deva === deva)) {
+          items.push({ id: `grand:${v.id}:${l.id}:${deva}`, deva, translit: toIAST(deva), meaning: l.deva });
+          break;
+        }
+      }
+    }
+    return formPart(`${GRAND}${g + 1}`, `Grand Test ${g + 1}`, `All lakaras · ${persons[person].sanskrit}`, items, FORM_GRAND_MARKS, pool);
+  });
+
   return {
-    id: `verbs-${lakaraId}`,
-    group,
-    title: `Verbs · ${lakara.name}`,
-    deva: lakara.deva,
+    id: "verbs",
+    group: "grammar",
+    title: "Verbs",
+    deva: "धातुरूपाणि",
     icon: "🏃",
-    modes: ALL_MODES,
+    modes: ["form"],
     parts,
     items: parts.flatMap((p) => p.items),
+    grands,
   };
 }
 
@@ -175,45 +233,87 @@ function sentencesTopic(): Topic {
   return { id: "sentences", group: "grammar", title: "Sentences", deva: "वाक्यानि", icon: "✍️", modes: ["meaning", "reverse"], parts, items, pool };
 }
 
-function nounsTopic(): Topic {
-  const parts: Part[] = [];
-  for (const d of declensions) {
-    const cells = d.forms.flatMap((row, c) => row.map((deva, n) => ({ deva, row: cases[c].name, col: numberNames[n] })));
-    const items = formItems(`noun:${d.id}`, cells, `${d.stem} · ${d.kind}`, d.id);
-    chunk(items).forEach((c, i, all) =>
-      parts.push({ id: `${d.id}${i + 1}`, title: all.length > 1 ? `${d.stem} · Part ${i + 1}` : d.stem, subtitle: d.kind, items: c }),
+// The noun endings quiz: which ending does this word have? 20 questions for each gender.
+function nounEndingsTopic(): Topic {
+  const parts = nounGenders.map((g) => {
+    const classes = nounClasses.filter((c) => c.gender === g.id);
+    const items: QItem[] = classes.flatMap((c) =>
+      c.words.map((w) => {
+        const deva = w.forms[0][0];
+        return { id: `ending:${w.id}`, deva, translit: toIAST(deva), meaning: c.deva, group: c.id };
+      }),
     );
-  }
-  return { id: "nouns", group: "grammar", title: "Nouns", deva: "शब्दरूपाणि", icon: "📘", modes: ALL_MODES, parts, items: parts.flatMap((p) => p.items) };
+    return formPart(g.id, `${g.title} · ${g.deva}`, `${items.length} words`, items, FORM_TEST_MARKS, items);
+  });
+  return { id: "noun-endings", group: "grammar", title: "Noun endings", deva: "शब्दान्ताः", icon: "🔤", modes: ["form"], parts, items: parts.flatMap((p) => p.items), grands: [] };
 }
 
-const genderWord = { m: "masculine", f: "feminine", n: "neuter" } as const;
-
-function pronounTopics(): Topic[] {
-  return pronounSections.map((s) => {
-    const parts: Part[] = [];
-    for (const p of pronounList.filter((x) => x.section === s.id)) {
-      for (const t of p.tables) {
-        const label = t.gender ? `${p.stem} · ${genderWord[t.gender]}` : p.stem;
-        const cells = t.forms.flatMap((row, c) => row.map((deva, n) => ({ deva, row: cases[c].name, col: numberNames[n] })));
-        const items = formItems(`pron:${p.id}:${t.gender ?? "x"}`, cells, label, `${p.id}:${t.gender ?? "x"}`);
-        chunk(items).forEach((c, i, all) =>
-          parts.push({ id: `${p.id}-${t.gender ?? "x"}${i + 1}`, title: all.length > 1 ? `${label} · ${i + 1}` : label, subtitle: p.meaning, items: c }),
-        );
-      }
-    }
+// Sabdarup: one test per ending, a Grand Test per gender, and one last Grand Test over all three.
+function sabdarupTopics(): Topic[] {
+  const wordItems = (w: (typeof nounClasses)[number]["words"][number]) =>
+    formItems(w.id, w.forms.flatMap((row, c) => row.map((deva, n) => ({ deva, row: cases[c].sanskrit, col: numberNames[n] }))), w.id);
+  const perGender = nounGenders.map((g): Topic => {
+    const parts = nounClasses
+      .filter((c) => c.gender === g.id)
+      .map((c) => formPart(c.id, c.title, `${c.deva} · ${c.words.length} words`, c.words.flatMap(wordItems), FORM_TEST_MARKS));
+    const items = parts.flatMap((p) => p.items);
     return {
-      id: `pronouns-${s.id}`,
-      group: "grammar" as GroupId,
-      title: `Pronouns · ${s.title.replace(/ \(.*\)$/, "")}`,
-      deva: s.sanskrit,
-      icon: "👤",
-      modes: ALL_MODES,
+      id: `sabda-${g.id}`,
+      group: "grammar",
+      title: `${g.title} Śabda`,
+      deva: g.deva,
+      icon: "📘",
+      modes: ["form"],
       parts,
-      items: parts.flatMap((x) => x.items),
+      items,
+      grands: [formPart(GRAND, "Grand Test", `All ${g.title} words`, items, FORM_GRAND_MARKS)],
     };
   });
+  const items = perGender.flatMap((t) => t.items);
+  return [
+    ...perGender,
+    {
+      id: "sabda-all",
+      group: "grammar",
+      title: "All Śabda",
+      deva: "सर्वे शब्दाः",
+      icon: "🏆",
+      modes: ["form"],
+      parts: [],
+      items,
+      grands: [formPart(GRAND, "Grand Test", "All three genders together", items, FORM_GRAND_MARKS)],
+    },
+  ];
 }
+
+// One test per pronoun (all its genders together), then three Grand Tests that share no question.
+function pronounsTopic(): Topic {
+  const seen = new Set<string>();
+  const parts = pronounList.map((p) => {
+    const cells = p.tables.flatMap((t) => t.forms.flatMap((row, c) => row.map((deva, n) => ({ deva, row: cases[c].sanskrit, col: numberNames[n] }))));
+    return formPart(p.id, p.stem, p.meaning, formItems(`pron:${p.id}`, cells, p.id), FORM_TEST_MARKS);
+  });
+  const items = parts.flatMap((p) => p.items);
+  const distinct = items.filter((i) => !seen.has(i.deva) && seen.add(i.deva));
+  const grands = [0, 1, 2].map((g) =>
+    formPart(`${GRAND}${g + 1}`, `Grand Test ${g + 1}`, "All pronouns together", distinct.filter((_, i) => i % 3 === g), FORM_GRAND_MARKS, items),
+  );
+  return { id: "pronouns", group: "grammar", title: "Pronouns", deva: "सर्वनामानि", icon: "👤", modes: ["form"], parts, items, grands };
+}
+
+/** Parts titled "Part 1", "Part 2" … in `count` even parts, each asking all its items. */
+function evenParts(items: QItem[], count: number): Part[] {
+  return chunk(items, Math.ceil(items.length / count)).map((c, i) => ({
+    id: `part${i + 1}`, // not "p1": saved scores for the old, smaller parts shouldn't count
+    title: `Part ${i + 1}`,
+    subtitle: c[0].meaning && `${c[0].meaning} – ${c[c.length - 1].meaning}`,
+    items: c,
+    marks: c.length,
+  }));
+}
+
+// Greetings and Good Manners are quizzed together (General Update_2).
+const SEPARATE_WORDS = ["greetings", "manners"];
 
 export const topics: Topic[] = [
   {
@@ -226,7 +326,11 @@ export const topics: Topic[] = [
     items: allLetters,
     parts: numberedParts("p", allLetters),
   },
-  ...categories.map((c): Topic => {
+  (() => {
+    const items: QItem[] = categories.filter((c) => SEPARATE_WORDS.includes(c.slug)).flatMap((c) => c.words);
+    return { id: "greetings-manners", group: "words", title: "Greetings & Good Manners", deva: "अभिवादनं शिष्टाचारः च", icon: "🙏", modes: ALL_MODES, items, parts: numberedParts("p", items) } as Topic;
+  })(),
+  ...categories.filter((c) => !SEPARATE_WORDS.includes(c.slug)).map((c): Topic => {
     const items: QItem[] = c.words;
     return {
       id: c.slug,
@@ -236,7 +340,12 @@ export const topics: Topic[] = [
       icon: c.icon,
       modes: ALL_MODES,
       items,
-      parts: c.slug === "numbers" ? numberedParts("p", items, (w) => w.id.split(":")[1]) : numberedParts("p", items),
+      parts:
+        c.slug === "numbers"
+          ? numberedParts("p", items, (w) => w.id.split(":")[1])
+          : c.slug === "family"
+            ? evenParts(items, 3)
+            : numberedParts("p", items),
     };
   }),
   {
@@ -249,11 +358,21 @@ export const topics: Topic[] = [
     items: greetingSentences,
     parts: numberedParts("p", greetingSentences, (s) => s.deva.split(/[।,!?]/)[0]),
   },
-  nounsTopic(),
-  ...pronounTopics(),
-  ...basicLakaras.map((l) => verbTopic(l, "grammar")),
+  {
+    id: "spoken",
+    group: "phrases",
+    title: "Everyday sentences",
+    deva: "दैनिकवाक्यानि",
+    icon: "🗣️",
+    modes: ["toEnglish", "toSanskrit"],
+    items: spokenGroups.flatMap((g) => g.sentences),
+    parts: spokenGroups.map((g) => ({ id: g.id, title: g.title, subtitle: g.deva, items: g.sentences })),
+  },
+  nounEndingsTopic(),
+  ...sabdarupTopics(),
+  pronounsTopic(),
+  verbsTopic(),
   sentencesTopic(),
-  ...advancedLakaras.map((l) => verbTopic(l, "advanced")),
   (() => {
     const items: QItem[] = largeNumbers.rows.map((r) => ({
       id: `large:${r.power}`,
@@ -301,18 +420,56 @@ export type Question = {
   options: string[];
   answer: string;
   optionsAreDeva: boolean;
+  /** Set for the sentence builder: the word tiles in shuffled order, including wrong ones. */
+  tiles?: string[];
 };
 
-const answerOf = (it: QItem, m: Mode) => (m === "meaning" ? it.meaning! : m === "reverse" ? it.deva : it.translit);
-const promptOf = (it: QItem, m: Mode) => (m === "reverse" ? it.meaning! : it.deva);
+export const isBuilder = (m: Mode) => m === "toEnglish" || m === "toSanskrit";
+
+/** The words of a sentence as tiles: no punctuation. */
+export const tokens = (sentence: string) =>
+  sentence
+    .split(/\s+/)
+    .map((w) => w.replace(/[।॥.,!?]/g, ""))
+    .filter(Boolean);
+
+const WRONG_TILES = 4;
+
+const answerOf = (it: QItem, m: Mode) =>
+  m === "meaning" || m === "form" || m === "toEnglish" ? it.meaning! : m === "reverse" || m === "toSanskrit" ? it.deva : it.translit;
+const promptOf = (it: QItem, m: Mode) => (m === "reverse" || m === "toSanskrit" ? it.meaning! : it.deva);
+
+function builderQuestion(item: QItem, mode: Mode, pool: QItem[]): Question {
+  const answer = answerOf(item, mode);
+  const right = tokens(answer);
+  // अहं and अहम् are the same word, so one can't be a wrong tile for the other.
+  const same = (w: string) => w.toLowerCase().replace(/ं$/, "म्");
+  const has = new Set(right.map(same));
+  const others = [...new Map(pool.flatMap((o) => tokens(answerOf(o, mode))).map((w) => [same(w), w])).values()].filter((w) => !has.has(same(w)));
+  return {
+    item,
+    mode,
+    prompt: promptOf(item, mode),
+    promptIsDeva: mode === "toEnglish",
+    options: [],
+    answer,
+    optionsAreDeva: mode === "toSanskrit",
+    tiles: shuffle([...right, ...shuffle(others).slice(0, WRONG_TILES)]),
+  };
+}
 
 function question(item: QItem, mode: Mode, pool: QItem[]): Question {
+  if (isBuilder(mode)) return builderQuestion(item, mode, pool);
   const answer = answerOf(item, mode);
   const prompt = promptOf(item, mode);
   // A wrong answer must not also fit the prompt anywhere in the topic: ते is masculine plural
   // but also feminine and neuter dual, so "Nominative / Accusative · dual" can't be a wrong option for it.
   const alsoRight = new Set(pool.filter((o) => promptOf(o, mode) === prompt).map((o) => answerOf(o, mode)));
-  const candidates = pool.filter((o) => promptOf(o, mode) !== prompt && !alsoRight.has(answerOf(o, mode)));
+  // The same for answers naming several cells: मे is चतुर्थी and षष्ठी, so "षष्ठी · एकवचनम्" alone can't be wrong.
+  const rightCells = new Set(pool.filter((o) => o.deva === item.deva).flatMap((o) => o.cells ?? []));
+  const candidates = pool.filter(
+    (o) => promptOf(o, mode) !== prompt && !alsoRight.has(answerOf(o, mode)) && !o.cells?.some((c) => rightCells.has(c)),
+  );
   const pick = (from: QItem[], taken: string[]) =>
     shuffle([...new Set(from.map((o) => answerOf(o, mode)))].filter((v) => !taken.includes(v)));
   const wrong = pick(item.group ? candidates.filter((o) => o.group === item.group) : [], []).slice(0, 3);
@@ -324,7 +481,7 @@ function question(item: QItem, mode: Mode, pool: QItem[]): Question {
     promptIsDeva: mode !== "reverse",
     options: shuffle([answer, ...wrong]),
     answer,
-    optionsAreDeva: mode === "reverse",
+    optionsAreDeva: mode === "reverse" || mode === "form",
   };
 }
 
@@ -347,15 +504,50 @@ function fill(topic: Topic, chosen: QItem[], extra: QItem[], mode: Mode, total: 
   return shuffle(qs);
 }
 
+/** Draws `marks` items, taking turns between the groups (words), never the same word twice. */
+function draw(part: Part): QItem[] {
+  const queues = new Map<string, QItem[]>();
+  for (const it of shuffle(part.items)) {
+    const key = it.group ?? "";
+    queues.set(key, [...(queues.get(key) ?? []), it]);
+  }
+  const lists = shuffle([...queues.values()]);
+  const seen = new Set<string>();
+  const picked: QItem[] = [];
+  while (picked.length < part.marks! && lists.some((q) => q.length)) {
+    for (const q of lists) {
+      while (q.length && picked.length < part.marks!) {
+        const it = q.pop()!;
+        if (seen.has(it.deva)) continue;
+        seen.add(it.deva);
+        picked.push(it);
+        break;
+      }
+    }
+  }
+  return shuffle(picked);
+}
+
+const marksTest = (topic: Topic, part: Part, mode: Mode) => draw(part).map((it) => question(it, mode, part.pool ?? topic.pool ?? topic.items));
+
 /** A part: every one of its items once, topped up to 10 marks with review items from the rest of the topic. */
 export function partQuiz(topic: Topic, partIndex: number, mode: Mode): Question[] {
   const part = topic.parts[partIndex];
+  if (part.marks) return marksTest(topic, part, mode);
   const ids = new Set(part.items.map((i) => i.id));
   return fill(topic, part.items, topic.items.filter((i) => !ids.has(i.id)), mode, PART_MARKS);
 }
 
-/** The Grand Test: 20 marks, drawn evenly from every part of the topic. */
-export function grandTest(topic: Topic, mode: Mode): Question[] {
+/** A topic's Grand Tests: its named ones, or one 20-mark test over the whole topic. */
+export const grandsOf = (topic: Topic): Part[] =>
+  topic.grands ?? [{ id: GRAND, title: "Grand Test", items: topic.items, marks: GRAND_MARKS }];
+
+export const partMarks = (part: Part) => part.marks ?? PART_MARKS;
+
+/** A Grand Test. Named ones use their own draw; the default is drawn evenly from every part of the topic. */
+export function grandTest(topic: Topic, grandId: string, mode: Mode): Question[] {
+  const named = topic.grands?.find((g) => g.id === grandId);
+  if (named) return marksTest(topic, named, mode);
   const queues = topic.parts.map((p) => shuffle(p.items));
   const picked: QItem[] = [];
   while (picked.length < GRAND_MARKS && queues.some((q) => q.length)) {

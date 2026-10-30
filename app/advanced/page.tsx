@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PageHeader, SpeakButton, Switch, Tabs } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
 import { usePractice, VerbsSection } from "@/components/grammar";
-import { advancedLakaras, largeNumbers, ordinals } from "@/lib/data";
+import { advancedLakaras, capFirst, largeNumbers, ordinals } from "@/lib/data";
 
 type Tab = "verbs" | "numbers";
 type NumbersTab = "large" | "ordinal";
@@ -82,7 +82,7 @@ function LargeNumbers() {
         }
         back={
           <>
-            <p className="text-3xl font-semibold">{r.meaning}</p>
+            <p className="text-3xl font-semibold">{capFirst(r.meaning)}</p>
             <p className="mt-3 text-xl tabular-nums text-accent">{r.value}</p>
             <p className="deva mt-2 text-2xl">{r.deva}</p>
           </>
@@ -160,7 +160,7 @@ function OrdinalNumbers() {
         }
         back={
           <>
-            <p className="text-3xl font-semibold">{o.english}</p>
+            <p className="text-3xl font-semibold">{capFirst(o.english)}</p>
             <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-left">
               <dt className="text-sm text-muted">Masculine</dt>
               <dd className="deva text-lg">{o.masculine}</dd>

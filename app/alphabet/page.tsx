@@ -82,20 +82,11 @@ export default function AlphabetPage() {
           {letter.deva === "ह" && (
             <div className="mt-4 rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
               <p className="font-medium text-ink">Note</p>
-              <ul className="mt-1 space-y-0.5">
-                <li>
-                  Vowels (<span className="deva text-ink">स्वराः</span> · <span className="deva text-ink">अ–औ</span>): 13
-                </li>
-                <li>
-                  Anusvāra and visarga (<span className="deva text-ink">अयोगवाहौ</span> ·{" "}
-                  <span className="deva text-ink">अं</span> & <span className="deva text-ink">अः</span>): 2
-                </li>
-                <li>
-                  Consonants (<span className="deva text-ink">व्यञ्जनानि</span> · <span className="deva text-ink">क–ह</span>): 33
-                </li>
-              </ul>
-              <p className="mt-2">
-                In total, 48 letters are counted in the Sanskrit <span className="deva text-ink">वर्णमाला</span>.
+              <p className="mt-1">
+                In Devanagari, pure consonants natively end with a small diagonal slash underneath the letter called a{" "}
+                <em>halanta</em> (e.g. <span className="deva text-ink">क्, ख्, ग्, घ्, ङ्</span>). However, for ease of
+                pronunciation and writing, they are naturally combined with the inherent short vowel “a” and written as{" "}
+                <span className="deva text-ink">क, ख, ग, घ, ङ</span>.
               </p>
             </div>
           )}
@@ -119,18 +110,6 @@ export default function AlphabetPage() {
         )}
         groups={listGroups.length > 1 ? listGroups : undefined}
       />
-
-      {tab === "consonants" && (
-        <div className="mt-10 rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
-          <p className="font-medium text-ink">Note</p>
-          <p className="mt-1">
-            In Devanagari, pure consonants natively end with a small diagonal slash underneath the letter called a{" "}
-            <em>halanta</em> (e.g. <span className="deva text-ink">क्, ख्, ग्, घ्, ङ्</span>). However, for ease of
-            pronunciation and writing, they are naturally combined with the inherent short vowel “a” and written as{" "}
-            <span className="deva text-ink">क, ख, ग, घ, ङ</span>.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

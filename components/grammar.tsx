@@ -6,7 +6,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Chevron, Dropdown, SpeakButton, spring } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
-import { lakaras, persons, verbExamples, verbs, type LakaraId } from "@/lib/data";
+import { capFirst, lakaras, persons, verbExamples, verbs, type LakaraId } from "@/lib/data";
 import { toIAST } from "@/lib/iast";
 
 export const numberLabels = ["Singular · एकवचनम्", "Dual · द्विवचनम्", "Plural · बहुवचनम्"];
@@ -139,10 +139,10 @@ export function VerbsSection({ lakaraIds, practice }: { lakaraIds: LakaraId[]; p
         }
         back={
           <>
-            <p className="text-3xl font-semibold">{verb.meaning}</p>
+            <p className="text-3xl font-semibold">{capFirst(verb.meaning)}</p>
             <p className="deva mt-3 text-2xl text-accent">{verb.forms.lat![0][0]}</p>
             <p className="italic text-muted">{toIAST(verb.forms.lat![0][0])}</p>
-            <p className="text-sm text-muted">he / she / it {verb.english[2]}</p>
+            <p className="text-sm text-muted">He / she / it {verb.english[2]}</p>
           </>
         }
       />

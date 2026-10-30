@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
 import {
   bestOf,
-  GRAND_MARKS,
+  grandsOf,
   grandTest,
   groups,
+  isBuilder,
   isDone,
   modeLabels,
-  PART_MARKS,
+  partMarks,
   partQuiz,
   quizKey,
+  tokens,
   topics,
   type Mode,
   type Question,
@@ -21,7 +23,6 @@ import {
 import { actions, useProgress } from "@/lib/progress";
 import { speak } from "@/lib/speak";
 
-const GRAND = "grand";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 type Run = { topic: Topic; partId: string; mode: Mode; questions: Question[] };
@@ -47,7 +48,7 @@ export default function QuizPage() {
 
   const start = (t: Topic, partId: string, m: Mode) => {
     const i = t.parts.findIndex((p) => p.id === partId);
-    setRun({ topic: t, partId, mode: m, questions: partId === GRAND ? grandTest(t, m) : partQuiz(t, i, m) });
+    setRun({ topic: t, partId, mode: m, questions: i < 0 ? grandTest(t, partId, m) : partQuiz(t, i, m) });
     setCurrent(0);
     setPicked(null);
     setResults([]);
@@ -59,7 +60,7 @@ export default function QuizPage() {
     const q = run.questions[current];
     setPicked(opt);
     setResults((r) => [...r, opt === q.answer]);
-    if (q.promptIsDeva) speak(q.item.deva);
+    if (q.promptIsDeva || q.mode === "toSanskrit") speak(q.item.deva);
   };
 
   const next = () => {
@@ -78,7 +79,8 @@ export default function QuizPage() {
     const onKey = (e: KeyboardEvent) => {
       const n = Number(e.key);
       if (picked === null && n >= 1 && n <= run.questions[current].options.length) choose(run.questions[current].options[n - 1]);
-      else if (picked !== null && e.key === "Enter") next();
+      // A focused button gets its own click from Enter; calling next() here too would skip a question.
+      else if (picked !== null && e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) next();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -91,7 +93,7 @@ export default function QuizPage() {
         <PageHeader
           deva="परीक्षा"
           title="Quiz"
-          subtitle={`Every topic is split into parts of ${PART_MARKS} marks that cover every item. Finish all the parts of a topic to unlock its ${GRAND_MARKS}-mark Grand Test.`}
+          subtitle="Every topic is split into short tests. Finish all the tests of a topic to unlock its Grand Tests."
         />
         <div className="space-y-10">
           {groups.map((g) => (
@@ -104,7 +106,9 @@ export default function QuizPage() {
                   .filter((t) => t.group === g.id)
                   .map((t) => {
                     const done = t.parts.filter((p) => isDone(scores, t.id, p.id)).length;
-                    const grand = bestOf(scores, t.id, GRAND);
+                    const tGrands = grandsOf(t);
+                    const grandScores = tGrands.map((g) => bestOf(scores, t.id, g.id)).filter((v) => v !== undefined);
+                    const grand = grandScores.length ? Math.max(...grandScores) : undefined;
                     return (
                       <button
                         key={t.id}
@@ -124,11 +128,13 @@ export default function QuizPage() {
                         </span>
                         <span className="mt-3 flex items-center justify-between text-sm text-muted">
                           <span>
-                            {done} / {plural(t.parts.length, "part")}
+                            {t.parts.length > 0 && <>{done} / {plural(t.parts.length, "test")}</>}
                           </span>
-                          <span>{grand !== undefined ? `🏆 ${grand}%` : done === t.parts.length ? "🏆 Grand Test ready" : "🔒 Grand Test"}</span>
+                          {tGrands.length > 0 && (
+                            <span>{grand !== undefined ? `🏆 ${grand}%` : done === t.parts.length ? "🏆 Grand Test ready" : "🔒 Grand Test"}</span>
+                          )}
                         </span>
-                        <ProgressBar value={(done / t.parts.length) * 100} className="mt-2" />
+                        <ProgressBar value={t.parts.length ? (done / t.parts.length) * 100 : grand !== undefined ? 100 : 0} className="mt-2" />
                       </button>
                     );
                   })}
@@ -144,7 +150,9 @@ export default function QuizPage() {
   if (!run) {
     const done = topic.parts.filter((p) => isDone(scores, topic.id, p.id)).length;
     const unlocked = done === topic.parts.length;
-    const grand = bestOf(scores, topic.id, GRAND);
+    const left = topic.parts.length - done;
+    const tGrands = grandsOf(topic);
+    const grandCount = tGrands.length === 1 ? `a ${partMarks(tGrands[0])}-mark Grand Test` : tGrands.length ? `${tGrands.length} Grand Tests` : "";
     return (
       <div>
         <button type="button" onClick={() => setTopicId(null)} className="mb-6 text-sm text-muted hover:text-ink">
@@ -153,7 +161,13 @@ export default function QuizPage() {
         <PageHeader
           deva={topic.deva}
           title={topic.title}
-          subtitle={`${plural(topic.parts.length, "part")} of ${PART_MARKS} marks covering all ${topic.items.length} items, then a ${GRAND_MARKS}-mark Grand Test.`}
+          subtitle={[
+            topic.parts.length > 0 && `${plural(topic.parts.length, "test")} covering all of ${topic.title}`,
+            grandCount,
+          ]
+            .filter(Boolean)
+            .join(", then ")
+            .replace(/^a/, "A")}
         />
         {topic.modes.length > 1 && (
           <div className="mb-6">
@@ -162,70 +176,86 @@ export default function QuizPage() {
           </div>
         )}
 
-        <div className="mb-3 flex items-center gap-3 text-sm text-muted">
-          <span>
-            {done} of {plural(topic.parts.length, "part")} done
-          </span>
-          <ProgressBar value={(done / topic.parts.length) * 100} className="flex-1" />
-        </div>
+        {topic.parts.length > 0 && (
+          <>
+            <div className="mb-3 flex items-center gap-3 text-sm text-muted">
+              <span>
+                {done} of {plural(topic.parts.length, "test")} done
+              </span>
+              <ProgressBar value={(done / topic.parts.length) * 100} className="flex-1" />
+            </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {topic.parts.map((p) => {
-            const best = bestOf(scores, topic.id, p.id);
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {topic.parts.map((p) => {
+                const best = bestOf(scores, topic.id, p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => start(topic, p.id, mode)}
+                    data-spotlight
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 text-left hover:border-accent"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-lg">{p.title}</span>
+                      {p.subtitle && <span className="block truncate text-sm text-muted">{p.subtitle}</span>}
+                    </span>
+                    <span className="shrink-0 text-right text-sm">
+                      {best !== undefined ? (
+                        <span className="rounded-full bg-good-soft px-2.5 py-0.5 font-medium text-good">✓ {best}%</span>
+                      ) : (
+                        <span className="text-muted">{partMarks(p)} marks</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="mt-6 space-y-3">
+          {tGrands.map((g) => {
+            const best = bestOf(scores, topic.id, g.id);
             return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => start(topic, p.id, mode)}
-                data-spotlight
-                className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 text-left hover:border-accent"
+              <div
+                key={g.id}
+                className={`flex flex-wrap items-center justify-between gap-4 rounded-3xl p-6 ${
+                  unlocked ? "bg-accent text-accent-ink" : "border border-line bg-surface"
+                }`}
               >
-                <span className="min-w-0">
-                  <span className="block text-lg">{p.title}</span>
-                  {p.subtitle && <span className="block truncate text-sm text-muted">{p.subtitle}</span>}
-                </span>
-                <span className="shrink-0 text-right text-sm">
-                  {best !== undefined ? (
-                    <span className="rounded-full bg-good-soft px-2.5 py-0.5 font-medium text-good">✓ {best}%</span>
-                  ) : (
-                    <span className="text-muted">{PART_MARKS} marks</span>
-                  )}
-                </span>
-              </button>
+                <div>
+                  <p className="text-xl font-semibold">
+                    {unlocked ? "🏆" : "🔒"} {g.title} · {partMarks(g)} marks
+                  </p>
+                  <p className={`text-sm ${unlocked ? "opacity-90" : "text-muted"}`}>
+                    {unlocked
+                      ? `${g.subtitle ?? `Questions from all of ${topic.title}`}${best !== undefined ? ` · Best score: ${best}%` : ""}`
+                      : `Finish ${topic.parts.length === 1 ? "the test" : `all ${topic.parts.length} tests`} to unlock it (${left} left).`}
+                  </p>
+                </div>
+                {unlocked && (
+                  <button
+                    type="button"
+                    onClick={() => start(topic, g.id, mode)}
+                    className="rounded-full bg-accent-ink px-6 py-3 font-medium text-accent shadow-sm hover:shadow-md"
+                  >
+                    Start {g.title} →
+                  </button>
+                )}
+              </div>
             );
           })}
-        </div>
-
-        <div
-          className={`mt-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl p-6 ${
-            unlocked ? "bg-accent text-accent-ink" : "border border-line bg-surface"
-          }`}
-        >
-          <div>
-            <p className="text-xl font-semibold">{unlocked ? "🏆" : "🔒"} Grand Test · {GRAND_MARKS} marks</p>
-            <p className={`text-sm ${unlocked ? "opacity-90" : "text-muted"}`}>
-              {unlocked
-                ? `Questions from ${topic.parts.length === 1 ? "the whole of" : `all ${topic.parts.length} parts of`} ${topic.title}.${grand !== undefined ? ` Best score: ${grand}%.` : ""}`
-                : `Finish ${topic.parts.length === 1 ? "the part" : `all ${topic.parts.length} parts`} to unlock it (${topic.parts.length - done} left).`}
-            </p>
-          </div>
-          {unlocked && (
-            <button
-              type="button"
-              onClick={() => start(topic, GRAND, mode)}
-              className="rounded-full bg-accent-ink px-6 py-3 font-medium text-accent shadow-sm hover:shadow-md"
-            >
-              Start Grand Test →
-            </button>
-          )}
         </div>
       </div>
     );
   }
 
-  const isGrand = run.partId === GRAND;
   const partIndex = run.topic.parts.findIndex((p) => p.id === run.partId);
-  const runTitle = isGrand ? "Grand Test" : run.topic.parts[partIndex].title;
+  const isGrand = partIndex < 0;
+  const runGrands = grandsOf(run.topic);
+  const grandIndex = runGrands.findIndex((g) => g.id === run.partId);
+  const runTitle = isGrand ? runGrands[grandIndex].title : run.topic.parts[partIndex].title;
 
   // ---------- Results
   if (finished) {
@@ -233,7 +263,7 @@ export default function QuizPage() {
     const pct = Math.round((correct / run.questions.length) * 100);
     const missed = run.questions.filter((q, i) => !results[i] && run.questions.findIndex((x, j) => !results[j] && x.item.id === q.item.id) === i);
     const nextPart = !isGrand && partIndex + 1 < run.topic.parts.length ? run.topic.parts[partIndex + 1] : null;
-    const allDone = run.topic.parts.every((p) => isDone(scores, run.topic.id, p.id));
+    const nextGrand = isGrand ? runGrands[grandIndex + 1] : allDoneFirstGrand(run.topic, scores);
     return (
       <div className="mx-auto max-w-xl text-center">
         <motion.p
@@ -279,18 +309,17 @@ export default function QuizPage() {
           </button>
           {nextPart ? (
             <button type="button" onClick={() => start(run.topic, nextPart.id, run.mode)} className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-              Next part →
+              Next test →
             </button>
           ) : (
-            !isGrand &&
-            allDone && (
-              <button type="button" onClick={() => start(run.topic, GRAND, run.mode)} className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-                Grand Test →
+            nextGrand && (
+              <button type="button" onClick={() => start(run.topic, nextGrand.id, run.mode)} className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
+                {nextGrand.title} →
               </button>
             )
           )}
           <button type="button" onClick={() => setRun(null)} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
-            All parts
+            All tests
           </button>
         </div>
       </div>
@@ -300,7 +329,8 @@ export default function QuizPage() {
   // ---------- Question
   const q = run.questions[current];
   // One prompt size for the whole quiz, so it doesn't jump between questions.
-  const promptSize = run.questions.some((x) => x.promptIsDeva && x.prompt.length > 12) ? "text-4xl" : "text-6xl";
+  // Word-only tests draw at random, so they use the smaller size every time, not just when a long word comes up.
+  const promptSize = q.mode === "form" || run.questions.some((x) => x.promptIsDeva && x.prompt.length > 12) ? "text-4xl" : "text-6xl";
   return (
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-4">
@@ -312,13 +342,24 @@ export default function QuizPage() {
           {current + 1}/{run.questions.length}
         </span>
       </div>
-      <p className="mt-3 text-center text-sm text-muted">
-        {run.topic.title} · {runTitle}
-      </p>
+      {/* Word-only tests: a title like "Verbs · लट्" would give away the lakara, root or gender. */}
+      {q.mode !== "form" && (
+        <p className="mt-3 text-center text-sm text-muted">
+          {run.topic.title} · {runTitle}
+        </p>
+      )}
 
       <div className="mt-8 text-center">
         <p className="text-sm text-muted">
-          {q.mode === "meaning" ? "What does this mean?" : q.mode === "reverse" ? "How do you say this in Sanskrit?" : "How is this read?"}
+          {q.mode === "meaning"
+            ? "What does this mean?"
+            : q.mode === "reverse"
+              ? "How do you say this in Sanskrit?"
+              : q.mode === "sound"
+                ? "How is this read?"
+                : isBuilder(q.mode)
+                  ? "Pick the words to translate this"
+                  : ""}
         </p>
         {q.item.context && <p className="mt-1 text-lg font-medium text-accent">{q.item.context}</p>}
         <div className="mt-3 flex items-center justify-center gap-3">
@@ -335,7 +376,9 @@ export default function QuizPage() {
         </div>
       </div>
 
-      <div className="mt-10 grid gap-3 sm:grid-cols-2">
+      {q.tiles && <SentenceBuilder key={current} question={q} locked={picked !== null} onCheck={choose} />}
+
+      <div className={q.tiles ? "hidden" : "mt-10 grid gap-3 sm:grid-cols-2"}>
         {q.options.map((opt, i) => {
           const state = picked === null ? "idle" : opt === q.answer ? "right" : opt === picked ? "wrong" : "dim";
           return (
@@ -356,7 +399,7 @@ export default function QuizPage() {
               }`}
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs text-muted">{i + 1}</span>
-              <span className={q.optionsAreDeva ? "deva text-2xl" : "text-lg"}>{opt}</span>
+              <span className={q.mode === "form" ? "deva text-xl" : q.optionsAreDeva ? "deva text-2xl" : "text-lg"}>{opt}</span>
             </button>
           );
         })}
@@ -384,6 +427,81 @@ export default function QuizPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/** The test after the last part: the first Grand Test, once every part is done. */
+function allDoneFirstGrand(topic: Topic, scores: Record<string, number>) {
+  return topic.parts.every((p) => isDone(scores, topic.id, p.id)) ? grandsOf(topic)[0] : undefined;
+}
+
+// Sentence translation, like Duolingo: tap word tiles to build the answer, tap a placed word to take it back.
+function SentenceBuilder({ question: q, locked, onCheck }: { question: Question; locked: boolean; onCheck: (answer: string) => void }) {
+  const [placed, setPlaced] = useState<number[]>([]); // indexes into q.tiles
+  const tiles = q.tiles!;
+  const root = useRef<HTMLDivElement>(null);
+  const tileClass = `rounded-xl border border-line bg-surface px-3 py-1.5 ${q.optionsAreDeva ? "deva text-2xl" : "text-lg"}`;
+
+  const check = () => {
+    if (locked || !placed.length) return;
+    const built = placed.map((i) => tiles[i]);
+    const right = tokens(q.answer);
+    // Sanskrit word order is free, so any order of the right words counts; English needs its order.
+    const same = q.optionsAreDeva
+      ? [...built].sort().join(" ") === [...right].sort().join(" ")
+      : built.join(" ") === right.join(" ");
+    onCheck(same ? q.answer : built.join(" "));
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Enter on a button elsewhere (quit, speak) keeps its normal meaning.
+      const focused = document.activeElement;
+      if (e.key !== "Enter" || locked || (focused instanceof HTMLButtonElement && !root.current?.contains(focused))) return;
+      e.preventDefault(); // otherwise Enter also presses whichever tile has focus
+      check();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  return (
+    <div ref={root} className="mt-8">
+      <div className="flex min-h-16 flex-wrap items-center gap-2 border-y border-line py-3">
+        {placed.map((t, i) => (
+          <button key={t} type="button" disabled={locked} onClick={() => setPlaced((p) => p.filter((x) => x !== t))} className={`${tileClass} hover:border-accent`}>
+            {tiles[t]}
+            <span className="sr-only"> (position {i + 1}, tap to remove)</span>
+          </button>
+        ))}
+      </div>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        {tiles.map((word, i) => {
+          const used = placed.includes(i);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={locked || used}
+              onClick={() => setPlaced((p) => [...p, i])}
+              className={`${tileClass} ${used ? "opacity-30" : "hover:border-accent"}`}
+            >
+              {word}
+            </button>
+          );
+        })}
+      </div>
+      {!locked && (
+        <button
+          type="button"
+          onClick={check}
+          disabled={!placed.length}
+          className="mt-6 w-full rounded-full bg-accent py-3 font-medium text-accent-ink disabled:opacity-50"
+        >
+          Check
+        </button>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { PageHeader, SpeakButton, spring, Switch, Tabs } from "@/components/ui";
-import { phrases, shlokas } from "@/lib/data";
+import { phrases, shlokas, spokenGroups, type Phrase } from "@/lib/data";
 
 export default function PhrasesPage() {
   const [tab, setTab] = useState<"phrases" | "shlokas">("phrases");
@@ -34,20 +34,15 @@ export default function PhrasesPage() {
       </div>
 
       {tab === "phrases" ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {phrases.map((p) => (
-            <div key={p.translit} data-spotlight className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4">
-              <SpeakButton text={p.deva} />
-              <div>
-                <p className="deva text-2xl">{p.deva}</p>
-                <Reveal show={showTranslit}>
-                  <p className="italic text-accent">{p.translit}</p>
-                </Reveal>
-                <Reveal show={showMeaning}>
-                  <p className="text-sm text-muted">{p.meaning}</p>
-                </Reveal>
-              </div>
-            </div>
+        <div className="mt-6 space-y-8">
+          <PhraseGrid items={phrases} showTranslit={showTranslit} showMeaning={showMeaning} />
+          {spokenGroups.map((g) => (
+            <section key={g.id}>
+              <h2 className="mb-3 text-xl font-semibold">
+                {g.title} · <span className="deva text-accent">{g.deva}</span>
+              </h2>
+              <PhraseGrid items={g.sentences} showTranslit={showTranslit} showMeaning={showMeaning} />
+            </section>
           ))}
         </div>
       ) : (
@@ -84,6 +79,27 @@ export default function PhrasesPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function PhraseGrid({ items, showTranslit, showMeaning }: { items: Phrase[]; showTranslit: boolean; showMeaning: boolean }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {items.map((p) => (
+        <div key={p.translit} data-spotlight className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4">
+          <SpeakButton text={p.deva} />
+          <div>
+            <p className="deva text-2xl">{p.deva}</p>
+            <Reveal show={showTranslit}>
+              <p className="italic text-accent">{p.translit}</p>
+            </Reveal>
+            <Reveal show={showMeaning}>
+              <p className="text-sm text-muted">{p.meaning}</p>
+            </Reveal>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

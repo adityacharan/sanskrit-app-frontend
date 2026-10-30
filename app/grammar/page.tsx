@@ -4,9 +4,22 @@ import { useState } from "react";
 import { PageHeader, SpeakButton, Switch, Tabs } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
 import { FormsTable, usePractice, VerbsSection, type Practice } from "@/components/grammar";
-import { basicLakaras, cases, declensions, genderNames, pronounList, pronounSections, type Gender } from "@/lib/data";
+import {
+  allNouns,
+  basicLakaras,
+  capFirst,
+  cases,
+  declensions,
+  genderNames,
+  nounClasses,
+  nounGenders,
+  pronounList,
+  pronounSections,
+  type Gender,
+  type NounGender,
+} from "@/lib/data";
 
-type Tab = "nouns" | "verbs" | "pronouns";
+type Tab = "nouns" | "sabda" | "verbs" | "pronouns";
 
 export default function GrammarPage() {
   const [tab, setTab] = useState<Tab>("nouns");
@@ -29,6 +42,7 @@ export default function GrammarPage() {
           }}
           options={[
             { value: "nouns", label: "Nouns · शब्दरूपाणि" },
+            { value: "sabda", label: "Śabda by ending · शब्दाः" },
             { value: "verbs", label: "Verbs · धातुरूपाणि" },
             { value: "pronouns", label: "Pronouns · सर्वनामानि" },
           ]}
@@ -37,6 +51,7 @@ export default function GrammarPage() {
       </div>
 
       {tab === "nouns" && <Nouns practice={practice} />}
+      {tab === "sabda" && <SabdaSection practice={practice} />}
       {tab === "verbs" && <VerbsSection lakaraIds={basicLakaras} practice={practice} />}
       {tab === "pronouns" && <Pronouns practice={practice} />}
     </div>
@@ -63,7 +78,7 @@ function Nouns({ practice }: { practice: Practice }) {
         }
         back={
           <>
-            <p className="text-3xl font-semibold">{noun.meaning}</p>
+            <p className="text-3xl font-semibold">{capFirst(noun.meaning)}</p>
             <p className="deva mt-3 text-2xl text-accent">{noun.forms[0][0]}</p>
             <p className="text-sm text-muted">{noun.kind}</p>
           </>
@@ -104,6 +119,92 @@ function Nouns({ practice }: { practice: Practice }) {
           <p className="italic text-muted">rāmaḥ vanaṃ gacchati.</p>
           <p className="text-sm">Rama goes to the forest. (रामः = nominative, the subject)</p>
         </div>
+      </div>
+    </section>
+  );
+}
+
+// One card size across the whole section, so it doesn't change between the sub-sections.
+const sabdaSize = deckSize(allNouns.map((w) => w.deva));
+
+function SabdaSection({ practice }: { practice: Practice }) {
+  const [gender, setGender] = useState<NounGender>("m");
+  const inGender = nounClasses.filter((c) => c.gender === gender);
+  const [classId, setClassId] = useState(inGender[0].id);
+  const nounClass = inGender.find((c) => c.id === classId) ?? inGender[0];
+  const words = nounClass.words;
+  const deck = useDeck(words.length);
+  const word = words[deck.index];
+
+  const pickClass = (id: string) => {
+    setClassId(id);
+    deck.reset();
+    practice.reset();
+  };
+
+  return (
+    <section className="mt-6">
+      <Tabs
+        value={gender}
+        onChange={(g) => {
+          setGender(g);
+          pickClass(nounClasses.find((c) => c.gender === g)!.id);
+        }}
+        options={nounGenders.map((g) => ({ value: g.id, label: `${g.title} · ${g.deva}` }))}
+      />
+      <div className="mt-3">
+        <Tabs value={nounClass.id} onChange={pickClass} options={inGender.map((c) => ({ value: c.id, label: `${c.short} · ${c.deva}` }))} />
+      </div>
+
+      <h2 className="mb-4 mt-6 text-xl font-semibold">
+        {nounClass.title} · <span className="deva text-accent">{nounClass.deva}</span>
+      </h2>
+      <Deck
+        deck={deck}
+        count={words.length}
+        cardKey={word.id}
+        speakText={() => word.deva}
+        front={
+          <>
+            <p className={`deva ${sabdaSize}`}>{word.deva}</p>
+            <p className="mt-3 text-lg italic text-muted">{word.translit}</p>
+          </>
+        }
+        back={
+          <>
+            <p className="text-3xl font-semibold">{word.meaning}</p>
+            <p className="deva mt-3 text-2xl text-accent">{word.deva}</p>
+            <p className="italic text-muted">{word.translit}</p>
+            {word.note && <p className="mt-3 text-sm text-muted">{word.note}</p>}
+          </>
+        }
+      />
+
+      <PreviewList
+        title={
+          <>
+            All words · <span className="deva text-accent">{nounClass.deva}</span>
+          </>
+        }
+        items={words}
+        active={deck.index}
+        onPick={(i) => {
+          deck.goTo(i);
+          practice.reset();
+        }}
+        getKey={(w) => w.id}
+        chip={(w) => (
+          <>
+            <span className="deva text-lg">{w.deva}</span> <span className="text-sm italic text-muted">{w.meaning}</span>
+          </>
+        )}
+      />
+
+      <p className="mt-8 text-sm text-muted">
+        <span className="deva text-ink">{word.deva}</span> means “{word.meaning}”. Eight cases × three numbers. Where a case has two forms, both are shown.
+      </p>
+      <div className="mt-3">
+        <FormsTable id={word.id} rows={cases} forms={word.forms} practice={practice} />
       </div>
     </section>
   );

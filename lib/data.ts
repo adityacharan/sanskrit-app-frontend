@@ -1,5 +1,7 @@
 // Mock content for the app. No backend — everything lives here.
 
+import { toIAST } from "./iast";
+
 export type Letter = {
   id: string;
   deva: string;
@@ -9,6 +11,9 @@ export type Letter = {
 };
 
 export type LetterGroup = { name: string; sanskrit: string; letters: Letter[] };
+
+/** Flashcards show English with a capital first letter. */
+export const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const L = (
   deva: string,
@@ -20,7 +25,7 @@ const L = (
   deva,
   translit,
   sound,
-  example: example && { deva: example[0], translit: example[1], meaning: example[2] },
+  example: example && { deva: example[0], translit: example[1], meaning: capFirst(example[2]) },
 });
 
 export const vowels: LetterGroup[] = [
@@ -148,7 +153,7 @@ export type Word = {
   meaning: string;
   category: string;
   numeral?: string; // numbers only: "१ (1)"
-  note?: string; // shown on the card back and in the word list
+  example?: string; // numbers 1–4: the gender example on the card back
 };
 
 export type Category = {
@@ -174,7 +179,7 @@ const cat = (
     id: `${slug}:${translit}`,
     deva,
     translit,
-    meaning,
+    meaning: capFirst(meaning),
     category: slug,
   })),
 });
@@ -182,14 +187,15 @@ const cat = (
 // Numbers 1–100 from the owner's P-2_Numbers document, in its order and spelling.
 // 1–4 change with the gender of the noun (masculine / feminine / neuter); 5 onwards don't.
 // Each of 1–4 gets its own example (masculine, feminine, neuter), as the Ordinal Numbers document asked.
+// The gender note itself shows only under number 1 (General Update_2).
 const genderExamples = [
   "एकः बालकः, एका बालिका, एकं फलम्",
   "द्वौ बालकौ, द्वे बालिके, द्वे फले",
   "त्रयः बालकाः, तिस्रः बालिकाः, त्रीणि फलानि",
   "चत्वारः बालकाः, चतस्रः बालिकाः, चत्वारि फलानि",
 ];
-const genderNote = (n: number) =>
-  `The forms of Sanskrit numbers for 1–4 can vary according to the gender of the noun being counted. For example, ${genderExamples[n - 1]}. Numbers from 5 onwards there are no gender differences.`;
+export const numberGenderNote =
+  "The forms of Sanskrit numbers for 1–4 can vary according to the gender of the noun being counted. Numbers from 5 onwards there are no gender differences.";
 
 const numberRows: [string, string, string][] = [
   ["एकः / एका / एकम्", "ekaḥ / ekā / ekam", "one"],
@@ -307,10 +313,10 @@ const numbers: Category = {
       id: `numbers:${n}`,
       deva,
       translit,
-      meaning,
+      meaning: capFirst(meaning),
       category: "numbers",
       numeral: `${toDevaDigits(n)} (${n})`,
-      note: n <= 4 ? genderNote(n) : undefined,
+      example: genderExamples[n - 1],
     };
   }),
 };
@@ -364,6 +370,66 @@ export const largeNumbers: {
   }),
 };
 
+// The owner's General Update_2 table and list, merged without repeats and ordered by relation:
+// parents, children, spouse, siblings, grandparents, grandchildren, uncles and aunts, nephews and nieces, in-laws, friend.
+const familyRows: [string, string][] = [
+  ["मातापितरौ / पितरौ", "Parents"],
+  ["जननी / माता", "Mother"],
+  ["जनकः / पिता", "Father"],
+  ["विमाता", "Stepmother"],
+  ["पुत्रः", "Son"],
+  ["पुत्री", "Daughter"],
+  ["पतिः / भर्ता / कान्तः", "Husband"],
+  ["भार्या / पत्नी / दारा / कान्ता / कलत्रम्", "Wife"],
+  ["भ्राता / सहोदरः", "Brother"],
+  ["भगिनी / सहोदरी", "Sister"],
+  ["अग्रजः / ज्येष्ठभ्राता", "Elder Brother"],
+  ["अनुजः / कनिष्ठभ्राता", "Younger Brother"],
+  ["अग्रजा / ज्येष्ठभगिनी", "Elder Sister"],
+  ["अनुजा / कनिष्ठभगिनी", "Younger Sister"],
+  ["पितामहः", "Grandfather (Father's father)"],
+  ["पितामही", "Grandmother (Father's mother)"],
+  ["मातामहः", "Maternal Grandfather (Mother's father)"],
+  ["मातामही", "Maternal Grandmother (Mother's mother)"],
+  ["प्रपितामहः", "Great Grandfather"],
+  ["प्रपितामही", "Great Grandmother"],
+  ["पौत्रः", "Grandson (Son's son)"],
+  ["पौत्री", "Granddaughter (Son's daughter)"],
+  ["दौहित्रः", "Grandson (Daughter's son)"],
+  ["दौहित्री", "Granddaughter (Daughter's daughter)"],
+  ["प्रपौत्रः", "Great Grandson"],
+  ["प्रपौत्री", "Great Granddaughter"],
+  ["पितृव्यः", "Uncle (Father's brother)"],
+  ["पितृव्या", "Aunt (Father's brother's wife)"],
+  ["पितृभगिनी / पितृष्वसा", "Aunt (Father's sister)"],
+  ["मातुलः", "Maternal Uncle (Mother's brother)"],
+  ["मातुलानी", "Maternal Aunt (Mother's brother's wife)"],
+  ["मातृभगिनी / मातृष्वसा", "Aunt (Mother's sister)"],
+  ["भागिनेयः", "Nephew (Sister's son)"],
+  ["भागिनेया", "Niece (Sister's daughter)"],
+  ["भ्रातृव्यः / भ्रातृपुत्रः", "Nephew (Brother's son)"],
+  ["भ्रातृव्या / भ्रातृजा", "Niece (Brother's daughter)"],
+  ["श्वशुरः", "Father-in-law"],
+  ["श्वश्रूः", "Mother-in-law"],
+  ["जामाता", "Son-in-law"],
+  ["वधू / पुत्रवधूः / स्नुषा", "Daughter-in-law"],
+  ["श्यालः", "Brother-in-law (Wife's brother)"],
+  ["देवरः", "Brother-in-law (Husband's brother)"],
+  ["आवुत्तः", "Brother-in-law (Sister's husband)"],
+  ["ननान्दा", "Sister-in-law (Husband's sister)"],
+  ["भ्रातृजाया", "Sister-in-law (Brother's wife)"],
+  ["याता", "Sister-in-law (Husband's brother's wife)"],
+  ["मित्रम् / स्नेहितः / सखा / सुहृद्", "Friend"],
+];
+
+const family = cat(
+  "family",
+  "Family",
+  "परिवारः",
+  "👪",
+  familyRows.map(([deva, meaning]) => [deva, toIAST(deva), meaning]),
+);
+
 export const categories: Category[] = [
   cat("greetings", "Greetings", "अभिवादनम्", "🙏", [
     ["हरिः ॐ", "hariḥ oṃ", "hello"],
@@ -390,16 +456,7 @@ export const categories: Category[] = [
     ["महान् आनन्दः", "mahān ānandaḥ", "very happy"],
   ]),
   numbers,
-  cat("family", "Family", "कुटुम्बम्", "👪", [
-    ["माता", "mātā", "mother"],
-    ["पिता", "pitā", "father"],
-    ["भ्राता", "bhrātā", "brother"],
-    ["भगिनी", "bhaginī", "sister"],
-    ["पुत्रः", "putraḥ", "son"],
-    ["पुत्री", "putrī", "daughter"],
-    ["पितामहः", "pitāmahaḥ", "grandfather"],
-    ["मित्रम्", "mitram", "friend"],
-  ]),
+  family,
   cat("nature", "Nature", "प्रकृतिः", "🌿", [
     ["सूर्यः", "sūryaḥ", "sun"],
     ["चन्द्रः", "candraḥ", "moon"],
@@ -518,6 +575,8 @@ export const declensions: Declension[] = [
 export { lakaras, basicLakaras, advancedLakaras, persons, verbs, verbExamples, sentence, quizSubjects, sentenceLakaras } from "./verbs";
 export { ordinals, type Ordinal } from "./ordinals";
 export { pronounList, pronounSections, genderNames, type Pronoun, type Gender } from "./pronouns";
+export { allNouns, nounClasses, nounGenders, type NounClass, type NounGender, type NounWord } from "./nouns";
+export { spokenGroups, spokenSentences, type SpokenGroup, type SpokenSentence } from "./spoken";
 export type { Verb, Lakara, LakaraId, Forms, Sentence, Subject } from "./verbs";
 
 // ---------------------------------------------------------------- phrases

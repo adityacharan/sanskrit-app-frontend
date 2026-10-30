@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader, ProgressBar, SpeakButton, Tabs } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
-import { categories } from "@/lib/data";
+import { categories, numberGenderNote } from "@/lib/data";
 import { actions, useProgress } from "@/lib/progress";
 
 export default function VocabularyPage() {
@@ -86,7 +86,7 @@ function Vocabulary() {
               <p className="text-3xl font-semibold">{word.meaning}</p>
               <p className="deva mt-3 text-2xl text-accent">{word.deva}</p>
               <p className="italic text-muted">{word.translit}</p>
-              {word.note && <p className="mt-3 text-sm text-muted">{word.note}</p>}
+              {word.example && <p className="deva mt-3 text-lg">{word.example}</p>}
             </>
           }
         >
@@ -113,6 +113,12 @@ function Vocabulary() {
               I know this ✓
             </button>
           </div>
+          {word.id === "numbers:1" && (
+            <div className="mt-4 rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
+              <p className="font-medium text-ink">Note</p>
+              <p className="mt-1">{numberGenderNote}</p>
+            </div>
+          )}
         </Deck>
       </div>
 
