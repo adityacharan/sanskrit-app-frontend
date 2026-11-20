@@ -9,6 +9,7 @@ export type Progress = {
   learned: string[]; // word ids marked "I know this"
   quizzesTaken: number;
   bestScores: Record<string, number>; // quiz key -> best percentage
+  lessons: Record<string, number>; // vocabulary lesson key (tab/unit/n) -> best first-try percentage
   streak: number;
   lastActive: string | null; // YYYY-MM-DD
 };
@@ -20,6 +21,7 @@ const DEFAULT: Progress = {
   learned: [],
   quizzesTaken: 0,
   bestScores: {},
+  lessons: {},
   streak: 0,
   lastActive: null,
 };
@@ -100,6 +102,15 @@ export const actions = {
       xp: p.xp + correct * 10,
       quizzesTaken: p.quizzesTaken + 1,
       bestScores: { ...p.bestScores, [key]: Math.max(pct, p.bestScores[key] ?? 0) },
+    });
+  },
+  /** A finished vocabulary lesson: 10 XP, 15 when every answer was right first time. */
+  completeLesson(key: string, pct: number) {
+    const p = withActivity(read());
+    write({
+      ...p,
+      xp: p.xp + (pct === 100 ? 15 : 10),
+      lessons: { ...p.lessons, [key]: Math.max(pct, p.lessons[key] ?? 0) },
     });
   },
   reset() {

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { ProgressBar } from "@/components/ui";
-import { allWords, categories } from "@/lib/data";
+import { allWords } from "@/lib/data";
+import { allLessons, vocabTabs } from "@/lib/lessons";
 import { levelFor, useProgress } from "@/lib/progress";
 
 const sections = [
   { href: "/alphabet", title: "Alphabet", deva: "वर्णमाला", desc: "Vowels and consonants of Devanagari with sounds.", icon: "अ" },
-  { href: "/vocabulary", title: "Vocabulary", deva: "शब्दाः", desc: "Flashcards across greetings, numbers, family, nature and more.", icon: "📖" },
+  { href: "/vocabulary", title: "Vocabulary", deva: "शब्दाः", desc: "Flashcards and Duolingo-style lessons with about a thousand everyday sentences.", icon: "📖" },
   { href: "/quiz", title: "Quiz", deva: "परीक्षा", desc: "Test yourself and earn XP for every correct answer.", icon: "🎯" },
   { href: "/grammar", title: "Grammar", deva: "व्याकरणम्", desc: "Nouns by ending, verbs in five lakaras and pronouns in clear tables.", icon: "📐" },
   { href: "/advanced", title: "Advanced Grammar", deva: "उन्नतव्याकरणम्", desc: "The other five lakaras, large numbers and ordinal numbers.", icon: "🎓" },
@@ -74,26 +75,29 @@ export default function Home() {
       <section>
         <h2 className="mb-4 text-xl font-semibold">Vocabulary progress</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          {categories.map((c) => {
-            const done = c.words.filter((w) => learned.has(w.id)).length;
+          {vocabTabs.map((t) => {
+            const lessons = allLessons(t);
+            const done = lessons.filter((l) => l.key in progress.lessons).length;
             return (
               <Link
-                key={c.slug}
-                href={`/vocabulary?c=${c.slug}`}
+                key={t.slug}
+                href={`/vocabulary?c=${t.slug}`}
                 data-spotlight
                 className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4"
               >
-                <span className="text-2xl">{c.icon}</span>
+                <span className="text-2xl">{t.icon}</span>
                 <div className="flex-1">
-                  <div className="flex items-baseline justify-between">
-                    <p className="font-medium">
-                      {c.title} <span className="deva text-sm text-muted">{c.sanskrit}</span>
+                  <div className="flex items-baseline justify-between gap-3">
+                    {/* The Sanskrit on its own line: inline, the long names wrapped and made some cards taller. */}
+                    <p className="min-w-0 font-medium">
+                      {t.title}
+                      <span className="deva block text-sm font-normal text-muted">{t.sanskrit}</span>
                     </p>
-                    <p className="text-sm tabular-nums text-muted">
-                      {done}/{c.words.length}
+                    <p className="shrink-0 text-sm tabular-nums text-muted">
+                      {done}/{lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}
                     </p>
                   </div>
-                  <ProgressBar value={(done / c.words.length) * 100} className="mt-2" />
+                  <ProgressBar value={(done / lessons.length) * 100} className="mt-2" />
                 </div>
               </Link>
             );

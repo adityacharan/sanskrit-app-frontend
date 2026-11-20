@@ -335,8 +335,8 @@ export const topics: Topic[] = [
     return {
       id: c.slug,
       group: "words",
-      title: c.title,
-      deva: c.sanskrit,
+      title: c.slug === "numbers" ? "Numbers" : c.title, // the tab is "Numbers and Time"; the time sentences aren't quizzed
+      deva: c.slug === "numbers" ? "सङ्ख्याः" : c.sanskrit,
       icon: c.icon,
       modes: ALL_MODES,
       items,

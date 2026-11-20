@@ -302,10 +302,12 @@ const numberRows: [string, string, string][] = [
 
 export const toDevaDigits = (n: number) => String(n).replace(/\d/g, (d) => "०१२३४५६७८९"[Number(d)]);
 
+// The tab was renamed "Numbers and Time" (Edited_daily_Conversation.docx); the book's time
+// sentences are its lessons. The quiz still calls the topic Numbers, because it asks only these.
 const numbers: Category = {
   slug: "numbers",
-  title: "Numbers",
-  sanskrit: "सङ्ख्याः",
+  title: "Numbers and Time",
+  sanskrit: "सङ्ख्याः समयः च",
   icon: "🔢",
   words: numberRows.map(([deva, translit, meaning], i) => {
     const n = i + 1;

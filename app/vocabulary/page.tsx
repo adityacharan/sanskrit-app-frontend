@@ -1,10 +1,12 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, ProgressBar, SpeakButton, Tabs } from "@/components/ui";
+import { Chevron, Dropdown, PageHeader, ProgressBar, SpeakButton, Tabs } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
-import { categories, numberGenderNote } from "@/lib/data";
+import { BookList, LessonPath } from "@/components/lessons";
+import { numberGenderNote, type Category } from "@/lib/data";
+import { vocabTabs } from "@/lib/lessons";
 import { actions, useProgress } from "@/lib/progress";
 
 export default function VocabularyPage() {
@@ -18,38 +20,67 @@ export default function VocabularyPage() {
 function Vocabulary() {
   const params = useSearchParams();
   const router = useRouter();
-  const slug = params.get("c") ?? categories[0].slug;
-  const category = categories.find((c) => c.slug === slug) ?? categories[0];
-  const deck = useDeck(category.words.length);
-  const progress = useProgress();
-  const learned = new Set(progress.learned);
-
-  const { reset } = deck;
-  useEffect(() => reset(), [category.slug, reset]);
-
-  const word = category.words[deck.index];
-  const size = deckSize(category.words.map((w) => w.deva));
-  const done = category.words.filter((w) => learned.has(w.id)).length;
-
-  const pickCategory = (s: string) => {
-    deck.reset();
-    router.replace(`/vocabulary?c=${s}`, { scroll: false });
-  };
+  const slug = params.get("c") ?? vocabTabs[0].slug;
+  const tab = vocabTabs.find((t) => t.slug === slug) ?? vocabTabs[0];
+  const pick = (s: string) => router.replace(`/vocabulary?c=${s}`, { scroll: false });
 
   return (
     <div>
       <PageHeader
         deva="शब्दाः"
         title="Vocabulary"
-        subtitle="Flip each card to reveal its meaning. Mark words you know to earn XP and track your progress."
+        subtitle="Flip the cards to learn the words, then work through each tab's lessons, Duolingo-style, to practise every word and sentence."
       />
 
-      <Tabs
-        value={category.slug}
-        onChange={pickCategory}
-        options={categories.map((c) => ({ value: c.slug, label: `${c.icon} ${c.title}` }))}
-      />
+      {/* Ten tabs wrap into five rows on a phone, so phones get a menu instead. */}
+      <div className="sm:hidden">
+        <Dropdown
+          label="Choose a topic"
+          rootClassName="block"
+          triggerClassName="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left hover:border-accent aria-expanded:border-accent"
+          trigger={(open) => (
+            <>
+              <span>
+                {tab.icon} {tab.title} <span className="deva text-muted">{tab.sanskrit}</span>
+              </span>
+              <Chevron open={open} />
+            </>
+          )}
+          items={vocabTabs.map((t) => ({
+            key: t.slug,
+            label: (
+              <>
+                {t.icon} {t.title} <span className="deva text-muted">{t.sanskrit}</span>
+              </>
+            ),
+            selected: t.slug === tab.slug,
+          }))}
+          onSelect={pick}
+        />
+      </div>
+      <div className="hidden sm:block">
+        <Tabs value={tab.slug} onChange={pick} options={vocabTabs.map((t) => ({ value: t.slug, label: `${t.icon} ${t.title}` }))} />
+      </div>
 
+      {tab.category && <WordDeck key={tab.slug} category={tab.category} />}
+      <LessonPath tab={tab} />
+      <BookList key={tab.slug} units={tab.units.filter((u) => u.id !== "words")} />
+    </div>
+  );
+}
+
+// The tab's word cards: a flashcard deck and the list of all its words. Keyed by tab, so it starts at the first card.
+function WordDeck({ category }: { category: Category }) {
+  const deck = useDeck(category.words.length);
+  const progress = useProgress();
+  const learned = new Set(progress.learned);
+
+  const word = category.words[deck.index];
+  const size = deckSize(category.words.map((w) => w.deva));
+  const done = category.words.filter((w) => learned.has(w.id)).length;
+
+  return (
+    <>
       <div className="mt-6 flex items-center gap-3 text-sm text-muted">
         <span>
           {done} of {category.words.length} learned
@@ -161,7 +192,7 @@ function Vocabulary() {
           </div>
         )}
       />
-    </div>
+    </>
   );
 }
 

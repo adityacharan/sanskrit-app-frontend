@@ -114,7 +114,8 @@ export default function Nav() {
         </div>
       </header>
 
-      {/* Mobile tab bar */}
+      {/* Mobile tab bar. Hidden in a lesson, like Duolingo, so the Check button never sits behind it. */}
+      {!pathname.startsWith("/vocabulary/lesson") && (
       <nav className="material-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 border-t border-line/60 pb-[env(safe-area-inset-bottom)] md:hidden">
         {links.map((l) => {
           const active = isActive(l.href);
@@ -133,6 +134,7 @@ export default function Nav() {
           );
         })}
       </nav>
+      )}
     </>
   );
 }

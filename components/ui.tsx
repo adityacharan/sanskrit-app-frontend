@@ -130,6 +130,7 @@ export function Dropdown({
   label,
   header,
   triggerClassName = "",
+  rootClassName = "inline-block",
   kind = "listbox",
 }: {
   trigger: (open: boolean) => React.ReactNode;
@@ -139,6 +140,8 @@ export function Dropdown({
   label: string;
   header?: React.ReactNode;
   triggerClassName?: string;
+  /** Layout of the wrapper: inline by default; "block" lets a w-full trigger span its container. */
+  rootClassName?: string;
   /** "listbox" picks a value; "menu" runs actions. */
   kind?: "listbox" | "menu";
 }) {
@@ -204,7 +207,7 @@ export function Dropdown({
   };
 
   return (
-    <div ref={rootRef} className="relative inline-block">
+    <div ref={rootRef} className={`relative ${rootClassName}`}>
       <button
         ref={triggerRef}
         type="button"
