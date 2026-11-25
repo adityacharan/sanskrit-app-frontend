@@ -1,7 +1,9 @@
 // The quiz series (General Update_1): every topic is split into parts of 10 marks that between them
 // ask every item, and finishing all of a topic's parts unlocks a 20-mark Grand Test over the whole topic.
 // General Update_2 changed some topics: verbs, pronouns and nouns ask only the word, with Sanskrit options
-// and no repeated question (`marks` parts and named `grands`); the everyday sentences are built from word tiles.
+// and no repeated question (`marks` parts and named `grands`). Every sentence quiz gives the sentence in
+// English and its Sanskrit words as jumbled tiles to put together (mode `toSanskrit`); the owner asked
+// for this in place of whole-sentence questions with whole-sentence options.
 
 import {
   allLetters,
@@ -23,15 +25,16 @@ import {
 } from "./data";
 import { shuffle } from "./speak";
 import { toIAST } from "./iast";
+import { sameWord, spareOk } from "./tiles";
 
-export type Mode = "meaning" | "reverse" | "sound" | "form" | "toEnglish" | "toSanskrit";
+export type Mode = "meaning" | "reverse" | "sound" | "form" | "toSanskrit";
 export type QItem = {
   id: string;
   deva: string;
   translit: string;
   meaning?: string;
   context?: string; // shown above the question, e.g. "पठ् · लट्"
-  group?: string; // wrong answers come from the same group first
+  group?: string; // wrong answers, and spare word tiles, come from the same group first
   cells?: string[]; // the table cells this form fills: a wrong answer can't name any of them
 };
 export type Part = {
@@ -76,10 +79,10 @@ export const modeLabels: Record<Mode, string> = {
   reverse: "English → Sanskrit",
   sound: "Script → Romanization",
   form: "Identify the form",
-  toEnglish: "Sanskrit → English",
   toSanskrit: "English → Sanskrit",
 };
 const ALL_MODES: Mode[] = ["meaning", "reverse", "sound"];
+const SENTENCE_MODES: Mode[] = ["toSanskrit"];
 
 // ---------------------------------------------------------------- splitting into parts
 
@@ -212,7 +215,9 @@ function sentencesTopic(): Topic {
     const lakara = lakaras.find((x) => x.id === l)!;
     const chosen: QItem[] = [];
     verbs.forEach((v, vi) => {
-      const si = (vi + li * 7) % quizSubjects.length;
+      let si = (vi + li * 7) % quizSubjects.length;
+      // "I read." is also the past in English, and अपठम् is one of the spare tiles: ask "He reads." instead.
+      if (l === "lat" && v.english[1] === "read") si = quizSubjects.findIndex((s, i) => i >= si && s.english === 2);
       const s = sentence(v, l, quizSubjects[si]);
       if (s) chosen.push({ id: `${l}:${v.id}:${si}`, deva: s.deva, translit: s.translit, meaning: s.meaning, group: `${v.id}:${si}` });
     });
@@ -221,7 +226,7 @@ function sentencesTopic(): Topic {
       parts.push({ id: `${l}${i + 1}`, title: `${lakara.deva} · Part ${i + 1}`, subtitle: lakara.name, items: c }),
     );
   });
-  // Wrong answers: the same subject and verb in the other lakaras, so the question tests the lakara.
+  // Spare tiles: the same subject and verb in the other lakaras, so the question tests the lakara.
   verbs.forEach((v) =>
     quizSubjects.forEach((s, si) =>
       sentenceLakaras.forEach((l) => {
@@ -230,7 +235,7 @@ function sentencesTopic(): Topic {
       }),
     ),
   );
-  return { id: "sentences", group: "grammar", title: "Sentences", deva: "वाक्यानि", icon: "✍️", modes: ["meaning", "reverse"], parts, items, pool };
+  return { id: "sentences", group: "grammar", title: "Sentences", deva: "वाक्यानि", icon: "✍️", modes: SENTENCE_MODES, parts, items, pool };
 }
 
 // The noun endings quiz: which ending does this word have? 20 questions for each gender.
@@ -354,7 +359,7 @@ export const topics: Topic[] = [
     title: "Greeting sentences",
     deva: "अभिवादनानि",
     icon: "💬",
-    modes: ALL_MODES,
+    modes: SENTENCE_MODES,
     items: greetingSentences,
     parts: numberedParts("p", greetingSentences, (s) => s.deva.split(/[।,!?]/)[0]),
   },
@@ -364,7 +369,7 @@ export const topics: Topic[] = [
     title: "Everyday sentences",
     deva: "दैनिकवाक्यानि",
     icon: "🗣️",
-    modes: ["toEnglish", "toSanskrit"],
+    modes: SENTENCE_MODES,
     items: spokenGroups.flatMap((g) => g.sentences),
     parts: spokenGroups.map((g) => ({ id: g.id, title: g.title, subtitle: g.deva, items: g.sentences })),
   },
@@ -420,11 +425,11 @@ export type Question = {
   options: string[];
   answer: string;
   optionsAreDeva: boolean;
-  /** Set for the sentence builder: the word tiles in shuffled order, including wrong ones. */
+  /** Set for the sentence builder: the Sanskrit word tiles in shuffled order, including spare ones. */
   tiles?: string[];
 };
 
-export const isBuilder = (m: Mode) => m === "toEnglish" || m === "toSanskrit";
+export const isBuilder = (m: Mode) => m === "toSanskrit";
 
 /** The words of a sentence as tiles: no punctuation. */
 export const tokens = (sentence: string) =>
@@ -433,28 +438,35 @@ export const tokens = (sentence: string) =>
     .map((w) => w.replace(/[।॥.,!?]/g, ""))
     .filter(Boolean);
 
+/** Sanskrit word order is free, so any order of the right words is the right sentence. */
+export const builtRight = (answer: string, built: string[]) =>
+  built.map(sameWord).sort().join(" ") === tokens(answer).map(sameWord).sort().join(" ");
+
 const WRONG_TILES = 4;
 
-const answerOf = (it: QItem, m: Mode) =>
-  m === "meaning" || m === "form" || m === "toEnglish" ? it.meaning! : m === "reverse" || m === "toSanskrit" ? it.deva : it.translit;
-const promptOf = (it: QItem, m: Mode) => (m === "reverse" || m === "toSanskrit" ? it.meaning! : it.deva);
+const answerOf = (it: QItem, m: Mode) => (m === "meaning" || m === "form" ? it.meaning! : m === "reverse" ? it.deva : it.translit);
+const promptOf = (it: QItem, m: Mode) => (m === "reverse" ? it.meaning! : it.deva);
 
+// The sentence in English, and its Sanskrit words jumbled among a few spare ones.
 function builderQuestion(item: QItem, mode: Mode, pool: QItem[]): Question {
-  const answer = answerOf(item, mode);
-  const right = tokens(answer);
-  // अहं and अहम् are the same word, so one can't be a wrong tile for the other.
-  const same = (w: string) => w.toLowerCase().replace(/ं$/, "म्");
-  const has = new Set(right.map(same));
-  const others = [...new Map(pool.flatMap((o) => tokens(answerOf(o, mode))).map((w) => [same(w), w])).values()].filter((w) => !has.has(same(w)));
+  const right = tokens(item.deva);
+  const has = new Set(right.map(sameWord));
+  const wordsOf = (from: QItem[]) =>
+    shuffle([...new Map(from.flatMap((o) => tokens(o.deva)).map((w) => [sameWord(w), w])).values()].filter((w) => !has.has(sameWord(w))));
+  // A verb sentence's spare tiles are the same verb in its other lakaras (the item's group), and nothing
+  // else: अस् has only three, and a word from another sentence could be a second subject or another "is".
+  const near = item.group ? wordsOf(pool.filter((o) => o.group === item.group)) : [];
+  // Otherwise they are words of the topic's other sentences that can't make a second right sentence.
+  const spare = (near.length >= WRONG_TILES - 1 ? near : wordsOf(pool).filter((w) => spareOk(w, right, item.meaning ?? ""))).slice(0, WRONG_TILES);
   return {
     item,
     mode,
-    prompt: promptOf(item, mode),
-    promptIsDeva: mode === "toEnglish",
+    prompt: item.meaning!,
+    promptIsDeva: false,
     options: [],
-    answer,
-    optionsAreDeva: mode === "toSanskrit",
-    tiles: shuffle([...right, ...shuffle(others).slice(0, WRONG_TILES)]),
+    answer: item.deva,
+    optionsAreDeva: true,
+    tiles: shuffle([...right, ...spare]),
   };
 }
 

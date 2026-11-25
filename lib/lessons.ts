@@ -6,6 +6,7 @@
 import { categories, type Category } from "./data";
 import { bookUnit, type BookUnit } from "./book";
 import { shuffle } from "./speak";
+import { sameWord, spareOk } from "./tiles";
 
 export type LessonItem = { id: string; deva: string; translit: string; meaning: string; kind: "word" | "sentence" };
 export type Unit = { id: string; deva: string; title: string; items: LessonItem[] };
@@ -110,9 +111,6 @@ export const tileWords = (deva: string) =>
     .map((w) => w.replace(/[।॥.,!?‘’'"()…]/g, ""))
     .filter(Boolean);
 
-/** अहं and अहम् are the same word. */
-export const sameWord = (w: string) => w.replace(/ं$/, "म्");
-
 // Slashes, brackets, blanks and "…" mark alternatives or gaps, which can't be built from tiles.
 const buildable = (it: LessonItem) => it.kind === "sentence" && !/[/()…_]/.test(it.deva) && tileWords(it.deva).length >= 2;
 
@@ -157,9 +155,14 @@ function practiceQ(item: LessonItem, pool: Pool): Exercise {
   }
   const right = tileWords(item.deva);
   const has = new Set(right.map(sameWord));
-  // Spare tiles come only from sentences that are built from tiles themselves: no brackets, blanks or slashes.
+  // Spare tiles come only from sentences that are built from tiles themselves (no brackets, blanks or
+  // slashes), and never a word that could make a second right sentence (`spareOk`).
   const wordsOf = (l: LessonItem[]) =>
-    shuffle([...new Map(l.filter(buildable).flatMap((o) => tileWords(o.deva)).map((w) => [sameWord(w), w])).values()].filter((w) => !has.has(sameWord(w))));
+    shuffle(
+      [...new Map(l.filter(buildable).flatMap((o) => tileWords(o.deva)).map((w) => [sameWord(w), w])).values()].filter(
+        (w) => !has.has(sameWord(w)) && spareOk(w, right, item.meaning),
+      ),
+    );
   const near = wordsOf(pool.near);
   const others = [...near, ...wordsOf(pool.far).filter((w) => !near.includes(w))];
   return { kind: "build", item, tiles: shuffle([...right, ...others.slice(0, WRONG_TILES)]) };
@@ -179,9 +182,11 @@ export const poolFor = (tab: VocabTab, lesson: Lesson): Pool => ({
 });
 
 /**
- * The lesson, like Duolingo: each new item is shown and then its meaning asked, two at a time;
- * then a round of matching pairs; then every item once more the other way round — built from
- * word tiles when it's a sentence, picked from Sanskrit options otherwise.
+ * The lesson, like Duolingo: each new item is shown and then asked, two at a time; then a round of
+ * matching pairs; then every item is asked once more, in a new order.
+ * A sentence is never asked whole with whole meanings to choose from (the owner asked for this): it is
+ * given in English and built from its jumbled Sanskrit word tiles, both times. Words, and sentences that
+ * can't be cut into tiles, are asked by meaning first and then picked from Sanskrit options.
  */
 export function buildLesson(lesson: Lesson, pool: Pool): Exercise[] {
   const items = lesson.items;
@@ -189,7 +194,7 @@ export function buildLesson(lesson: Lesson, pool: Pool): Exercise[] {
   for (let i = 0; i < items.length; i += 2) {
     const two = items.slice(i, i + 2);
     for (const it of two) steps.push({ kind: "intro", item: it });
-    for (const it of two) steps.push(meaningQ(it, pool));
+    for (const it of two) steps.push(buildable(it) ? practiceQ(it, pool) : meaningQ(it, pool));
   }
   // Short items only, so the two columns stay readable on a phone; no two with the same text.
   const short = items.filter((it) => it.deva.length <= 24 && it.meaning.length <= 40);

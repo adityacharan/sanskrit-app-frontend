@@ -62,9 +62,11 @@ function Vocabulary() {
         <Tabs value={tab.slug} onChange={pick} options={vocabTabs.map((t) => ({ value: t.slug, label: `${t.icon} ${t.title}` }))} />
       </div>
 
-      {tab.category && <WordDeck key={tab.slug} category={tab.category} />}
+      {/* Both reset when the tab changes. Their keys must differ: with one key for two siblings React
+          loses track of the old deck, which then stays on the page, dead, above the new one. */}
+      {tab.category && <WordDeck key={`deck:${tab.slug}`} category={tab.category} />}
       <LessonPath tab={tab} />
-      <BookList key={tab.slug} units={tab.units.filter((u) => u.id !== "words")} />
+      <BookList key={`book:${tab.slug}`} units={tab.units.filter((u) => u.id !== "words")} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
 import {
   bestOf,
+  builtRight,
   grandsOf,
   grandTest,
   groups,
@@ -14,7 +15,6 @@ import {
   partMarks,
   partQuiz,
   quizKey,
-  tokens,
   topics,
   type Mode,
   type Question,
@@ -358,7 +358,7 @@ export default function QuizPage() {
               : q.mode === "sound"
                 ? "How is this read?"
                 : isBuilder(q.mode)
-                  ? "Pick the words to translate this"
+                  ? "Pick the words to make this sentence in Sanskrit"
                   : ""}
         </p>
         {q.item.context && <p className="mt-1 text-lg font-medium text-accent">{q.item.context}</p>}
@@ -417,7 +417,10 @@ export default function QuizPage() {
             <div>
               <p className="font-semibold">{picked === q.answer ? "Correct! शोभनम्" : "Not quite"}</p>
               <p className="text-sm text-ink">
-                <span className="deva">{q.item.deva}</span> · <em>{q.item.translit}</em>
+                {/* A built sentence is shown whole only here, so it gets its own line at a readable size. */}
+                <span className={q.tiles ? "deva block text-lg" : "deva"}>{q.item.deva}</span>
+                {!q.tiles && " · "}
+                <em>{q.item.translit}</em>
                 {q.item.meaning && <> · {q.item.meaning}</>}
               </p>
             </div>
@@ -436,22 +439,21 @@ function allDoneFirstGrand(topic: Topic, scores: Record<string, number>) {
   return topic.parts.every((p) => isDone(scores, topic.id, p.id)) ? grandsOf(topic)[0] : undefined;
 }
 
-// Sentence translation, like Duolingo: tap word tiles to build the answer, tap a placed word to take it back.
+// Sentence translation, like Duolingo: the sentence is given in English and its Sanskrit words are jumbled
+// among a few spare ones. Tap word tiles to build the sentence, tap a placed word to take it back.
 function SentenceBuilder({ question: q, locked, onCheck }: { question: Question; locked: boolean; onCheck: (answer: string) => void }) {
   const [placed, setPlaced] = useState<number[]>([]); // indexes into q.tiles
   const tiles = q.tiles!;
   const root = useRef<HTMLDivElement>(null);
-  const tileClass = `rounded-xl border border-line bg-surface px-3 py-1.5 ${q.optionsAreDeva ? "deva text-2xl" : "text-lg"}`;
+  const tileClass = "deva rounded-xl border px-3 py-1.5 text-2xl";
+  const built = placed.map((i) => tiles[i]);
+  // After Check, the built sentence turns green or red, like a chosen option.
+  const placedClass = !locked ? "border-line bg-surface hover:border-accent" : builtRight(q.answer, built) ? "border-good bg-good-soft" : "border-bad bg-bad-soft";
 
   const check = () => {
     if (locked || !placed.length) return;
-    const built = placed.map((i) => tiles[i]);
-    const right = tokens(q.answer);
-    // Sanskrit word order is free, so any order of the right words counts; English needs its order.
-    const same = q.optionsAreDeva
-      ? [...built].sort().join(" ") === [...right].sort().join(" ")
-      : built.join(" ") === right.join(" ");
-    onCheck(same ? q.answer : built.join(" "));
+    // "✗" keeps a wrong sentence from ever being equal to the answer.
+    onCheck(builtRight(q.answer, built) ? q.answer : `✗ ${built.join(" ")}`);
   };
 
   useEffect(() => {
@@ -470,7 +472,7 @@ function SentenceBuilder({ question: q, locked, onCheck }: { question: Question;
     <div ref={root} className="mt-8">
       <div className="flex min-h-16 flex-wrap items-center gap-2 border-y border-line py-3">
         {placed.map((t, i) => (
-          <button key={t} type="button" disabled={locked} onClick={() => setPlaced((p) => p.filter((x) => x !== t))} className={`${tileClass} hover:border-accent`}>
+          <button key={t} type="button" disabled={locked} onClick={() => setPlaced((p) => p.filter((x) => x !== t))} className={`${tileClass} ${placedClass}`}>
             {tiles[t]}
             <span className="sr-only"> (position {i + 1}, tap to remove)</span>
           </button>
@@ -485,7 +487,7 @@ function SentenceBuilder({ question: q, locked, onCheck }: { question: Question;
               type="button"
               disabled={locked || used}
               onClick={() => setPlaced((p) => [...p, i])}
-              className={`${tileClass} ${used ? "opacity-30" : "hover:border-accent"}`}
+              className={`${tileClass} border-line bg-surface ${used ? "opacity-30" : "hover:border-accent"}`}
             >
               {word}
             </button>

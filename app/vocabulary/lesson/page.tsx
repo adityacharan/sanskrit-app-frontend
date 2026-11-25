@@ -342,12 +342,12 @@ function Build({
   status: Status;
 }) {
   const locked = status !== "idle";
-  const tile = `rounded-xl border bg-surface px-3 py-1.5 ${DEVA_OPTION}`;
+  const tile = `rounded-xl border px-3 py-1.5 ${DEVA_OPTION}`;
   // After Check, the built answer turns green or red like a chosen option.
-  const placedTile = status === "right" ? "border-good bg-good-soft" : status === "wrong" ? "border-bad bg-bad-soft" : "border-line hover:border-accent";
+  const placedTile = status === "right" ? "border-good bg-good-soft" : status === "wrong" ? "border-bad bg-bad-soft" : "border-line bg-surface hover:border-accent";
   return (
     <div>
-      <p className="text-sm text-muted">Write this in Sanskrit</p>
+      <p className="text-sm text-muted">Pick the words to make this sentence in Sanskrit</p>
       <Prompt item={ex.item} deva={false} />
       <div className="mt-6 flex min-h-16 flex-wrap items-center gap-2 border-y border-line py-3">
         {placed.map((t, i) => (
@@ -374,7 +374,7 @@ function Build({
               data-option="1"
               disabled={locked || used}
               onClick={() => setPlaced((p) => [...p, i])}
-              className={`${tile} border-line ${used ? "opacity-30" : "hover:border-accent"}`}
+              className={`${tile} border-line bg-surface ${used ? "opacity-30" : "hover:border-accent"}`}
             >
               {word}
             </button>
