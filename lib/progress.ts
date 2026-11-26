@@ -104,13 +104,17 @@ export const actions = {
       bestScores: { ...p.bestScores, [key]: Math.max(pct, p.bestScores[key] ?? 0) },
     });
   },
-  /** A finished vocabulary lesson: 10 XP, 15 when every answer was right first time. */
-  completeLesson(key: string, pct: number) {
+  /**
+   * A finished vocabulary lesson: 10 XP, 15 when every answer was right first time. The word cards it
+   * taught (`wordIds`) count as learned, so lessons and flashcards share one "words learned" number.
+   */
+  completeLesson(key: string, pct: number, wordIds: string[] = []) {
     const p = withActivity(read());
     write({
       ...p,
       xp: p.xp + (pct === 100 ? 15 : 10),
       lessons: { ...p.lessons, [key]: Math.max(pct, p.lessons[key] ?? 0) },
+      learned: [...p.learned, ...wordIds.filter((id) => !p.learned.includes(id))],
     });
   },
   reset() {

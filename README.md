@@ -17,10 +17,10 @@ Visitors are sent to `/login` first. Clicking **Login** sets a `sanskrit_session
 | Page | Path | What it does |
 | --- | --- | --- |
 | Login | `/login` | Placeholder sign-in screen with a single **Login** button (no credentials). Every page redirects here until you log in. |
-| Home | `/` | Level/XP/streak stats, learning path, and per-category progress. |
+| Learn (home) | `/` | The course map, like Duolingo's path: 14 sections of units, each a winding line of steps (159 lessons, then the tests). A card at the top carries on from the next step. Level, XP, streak and steps done. |
 | Alphabet | `/alphabet` | Vowels, anusvāra & visarga (अयोगवाहौ), and consonants grouped as the five vargas, the semivowels and the sibilants. Each letter is a flashcard; flip it for a word that begins with it. |
-| Vocabulary | `/vocabulary` | Flashcards in 7 categories (greetings, good manners, numbers 1–100, family, nature, animals, body). Tap to flip, swipe to move on, mark words as learned. |
-| Quiz | `/quiz` | Every topic is split into short tests; finishing them unlocks its Grand Tests. Words and phrases ask Sanskrit → English, English → Sanskrit or script → romanization. Verbs, pronouns and nouns show only the word, with Sanskrit options and no repeated question. The 100 everyday sentences are translated both ways by tapping word tiles. Keys `1`–`4` answer, `Enter` continues. |
+| Vocabulary | `/vocabulary` | Flashcards in 7 categories (greetings, good manners, numbers 1–100, family, nature, animals, body). Tap to flip, swipe to move on, mark words as learned. Each tab also lists the sentences its lessons teach. |
+| Test | `/quiz?t=…&p=…` | One test, opened from a step of the map (there is no Quiz page of its own any more). Words ask Sanskrit → English, English → Sanskrit or script → romanization. Verbs, pronouns and nouns show only the word, with Sanskrit options and no repeated question. Sentences are built in Sanskrit by tapping word tiles. Finishing a topic's tests unlocks its Grand Tests. Keys `1`–`4` answer, `Enter` continues. |
 | Grammar | `/grammar` | Noun declensions (राम, फल, लता), 113 nouns grouped by gender and ending with full tables, 32 verbs in five lakaras (लट्, लृट्, लङ्, लोट्, विधिलिङ्) shown person by person with example sentences, and every pronoun (सर्वनाम) declined in all seven cases, with a practice mode that hides forms until you tap them. |
 | Advanced Grammar | `/advanced` | The other five lakaras (लिट्, लुट्, आशीर्लिङ्, लुङ्, लृङ्), large numbers (महासङ्ख्याः) with Bhāskarācārya's shloka, and ordinal numbers 1st–100th and 1000th. |
 | Phrases | `/phrases` | Everyday sentences and five shlokas. Romanization and meaning can be switched on and off. |

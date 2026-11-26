@@ -1,116 +1,121 @@
 "use client";
 
+// Home is the course map (owner, 2026-11-26): one section of the path at a time, a button to carry on
+// from where you stopped, and the numbers that used to be the dashboard.
+
 import Link from "next/link";
-import { ProgressBar } from "@/components/ui";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CourseMap } from "@/components/map";
+import { Chevron, Dropdown, ProgressBar, Tabs } from "@/components/ui";
+import { allSteps, nextStep, sectionHref, sectionOfStep, sections, stepDone, stepsOf } from "@/lib/course";
 import { allWords } from "@/lib/data";
-import { allLessons, vocabTabs } from "@/lib/lessons";
 import { levelFor, useProgress } from "@/lib/progress";
 
-const sections = [
-  { href: "/alphabet", title: "Alphabet", deva: "वर्णमाला", desc: "Vowels and consonants of Devanagari with sounds.", icon: "अ" },
-  { href: "/vocabulary", title: "Vocabulary", deva: "शब्दाः", desc: "Flashcards and Duolingo-style lessons with about a thousand everyday sentences.", icon: "📖" },
-  { href: "/quiz", title: "Quiz", deva: "परीक्षा", desc: "Test yourself and earn XP for every correct answer.", icon: "🎯" },
-  { href: "/grammar", title: "Grammar", deva: "व्याकरणम्", desc: "Nouns by ending, verbs in five lakaras and pronouns in clear tables.", icon: "📐" },
-  { href: "/advanced", title: "Advanced Grammar", deva: "उन्नतव्याकरणम्", desc: "The other five lakaras, large numbers and ordinal numbers.", icon: "🎓" },
-  { href: "/phrases", title: "Phrases & Shlokas", deva: "वाक्यानि", desc: "Everyday sentences and famous verses with meanings.", icon: "💬" },
-];
+export default function HomePage() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
+  );
+}
 
-export default function Home() {
+function Home() {
+  const params = useSearchParams();
+  const router = useRouter();
   const progress = useProgress();
   const { level, into } = levelFor(progress.xp);
   const learned = new Set(progress.learned);
 
+  const next = nextStep(progress);
+  const done = allSteps.filter((s) => stepDone(progress, s)).length;
+  // The section in the address, or the one to carry on in.
+  const section = sections.find((s) => s.id === params.get("s")) ?? (next ? sectionOfStep(next) : sections[0]);
+  const pick = (id: string) => router.replace(sectionHref(id), { scroll: false });
+  const nextSection = next && sectionOfStep(next);
+  const nextUnit = next && nextSection!.units.find((u) => u.steps.includes(next));
+
   return (
-    <div className="space-y-10">
-      <section>
-        <div data-spotlight="light" className="rounded-3xl bg-accent p-8 text-accent-ink">
-          <p className="deva text-5xl sm:text-6xl">नमस्ते</p>
-          <h1 className="mt-3 text-2xl font-semibold tracking-[-0.02em] sm:text-3xl">Begin your journey into Sanskrit</h1>
-          <p className="mt-2 max-w-md opacity-90">
-            Learn the script, build vocabulary, and read your first shlokas — a few minutes a day.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/alphabet" className="block rounded-full bg-accent-ink px-5 py-2.5 font-medium text-accent shadow-sm hover:shadow-md">
-              Start with the alphabet
-            </Link>
-            <Link href="/quiz" className="block rounded-full border border-current/40 px-5 py-2.5 font-medium hover:bg-white/10">
-              Take a quiz
-            </Link>
-          </div>
+    <div className="space-y-8">
+      {next ? (
+        <Link href={next.href} data-spotlight="light" className="flex items-center justify-between gap-4 rounded-3xl bg-accent p-6 text-accent-ink sm:p-8">
+          <span className="min-w-0">
+            <span className="deva block text-4xl sm:text-5xl">नमस्ते</span>
+            <span className="mt-3 block text-sm opacity-90">
+              {done ? "Continue" : "Start here"} · {nextSection!.title}
+            </span>
+            <span className="block text-xl font-semibold tracking-[-0.02em] sm:text-2xl">
+              {next.label} · <span className="deva font-normal">{nextUnit!.deva}</span>
+            </span>
+          </span>
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-ink text-2xl text-accent" aria-hidden>
+            →
+          </span>
+        </Link>
+      ) : (
+        <div className="rounded-3xl bg-accent p-6 text-accent-ink sm:p-8">
+          <p className="deva text-4xl sm:text-5xl">साधु!</p>
+          <p className="mt-3 text-xl font-semibold">Every lesson and test is done. Pick any step to practise again.</p>
         </div>
-      </section>
+      )}
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Level" value={level} extra={<ProgressBar value={into} className="mt-3" />} />
         <Stat label="Total XP" value={progress.xp} />
         <Stat label="Day streak" value={`${progress.streak} 🔥`} />
-        <Stat label="Words learned" value={`${allWords.filter((w) => learned.has(w.id)).length}/${allWords.length}`} />
+        <Stat label="Steps done" value={`${done}/${allSteps.length}`} extra={<p className="mt-1 text-xs text-muted">{allWords.filter((w) => learned.has(w.id)).length} words learned</p>} />
       </section>
 
       <section>
-        <h2 className="mb-4 text-xl font-semibold">Learning path</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sections.map((s) => (
-            <Link
-              key={s.href}
-              href={s.href}
-              data-spotlight
-              className="group block h-full rounded-2xl border border-line bg-surface p-5 hover:shadow-[0_12px_30px_-12px_rgb(0_0_0/0.18)]"
-            >
-              <div className="flex items-center gap-3">
-                <span className="deva flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-xl text-accent">
-                  {s.icon}
+        <h1 className="mb-3 text-xl font-semibold">
+          Your path · <span className="deva text-accent">मार्गः</span>
+        </h1>
+        {/* Fourteen sections wrap into many rows on a phone, so phones get a menu instead. */}
+        <div className="sm:hidden">
+          <Dropdown
+            label="Choose a section"
+            rootClassName="block"
+            triggerClassName="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left hover:border-accent aria-expanded:border-accent"
+            trigger={(open) => (
+              <>
+                <span>
+                  {section.icon} {section.title} <span className="deva text-muted">{section.deva}</span>
                 </span>
-                <div>
-                  <p className="font-semibold group-hover:text-accent">{s.title}</p>
-                  <p className="deva text-sm text-muted">{s.deva}</p>
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-muted">{s.desc}</p>
-            </Link>
-          ))}
+                <Chevron open={open} />
+              </>
+            )}
+            items={sections.map((s) => ({
+              key: s.id,
+              label: (
+                <>
+                  {s.icon} {s.title} <span className="deva text-muted">{s.deva}</span>
+                </>
+              ),
+              selected: s.id === section.id,
+            }))}
+            onSelect={pick}
+          />
+        </div>
+        <div className="hidden sm:block">
+          <Tabs
+            value={section.id}
+            onChange={pick}
+            options={sections.map((s) => {
+              const steps = stepsOf(s);
+              return { value: s.id, label: `${s.icon} ${s.title}${steps.every((st) => stepDone(progress, st)) ? " ✓" : ""}` };
+            })}
+          />
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 text-xl font-semibold">Vocabulary progress</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {vocabTabs.map((t) => {
-            const lessons = allLessons(t);
-            const done = lessons.filter((l) => l.key in progress.lessons).length;
-            return (
-              <Link
-                key={t.slug}
-                href={`/vocabulary?c=${t.slug}`}
-                data-spotlight
-                className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4"
-              >
-                <span className="text-2xl">{t.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-baseline justify-between gap-3">
-                    {/* The Sanskrit on its own line: inline, the long names wrapped and made some cards taller. */}
-                    <p className="min-w-0 font-medium">
-                      {t.title}
-                      <span className="deva block text-sm font-normal text-muted">{t.sanskrit}</span>
-                    </p>
-                    <p className="shrink-0 text-sm tabular-nums text-muted">
-                      {done}/{lessons.length} {lessons.length === 1 ? "lesson" : "lessons"}
-                    </p>
-                  </div>
-                  <ProgressBar value={(done / lessons.length) * 100} className="mt-2" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      <CourseMap key={section.id} section={section} progress={progress} next={next} />
     </div>
   );
 }
 
 function Stat({ label, value, extra }: { label: string; value: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <div data-spotlight className="rounded-2xl border border-line bg-surface p-4">
+    <div className="rounded-2xl border border-line bg-surface p-4">
       <p className="text-sm text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
       {extra}

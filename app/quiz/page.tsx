@@ -1,54 +1,95 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+// One test (a topic's part, or a Grand Test), opened from a step of the course map. The Quiz page's own
+// lists of topics and tests are gone (2026-11-26): the map is that list now.
+
+import Link from "next/link";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { PageHeader, ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
+import { ProgressBar, SpeakButton, spring, Tabs } from "@/components/ui";
+import { grandOpen, nextTest, sectionHref, sectionOfTopic, stepOpen, testHref } from "@/lib/course";
 import {
   bestOf,
   builtRight,
   grandsOf,
   grandTest,
-  groups,
   isBuilder,
-  isDone,
   modeLabels,
   partMarks,
   partQuiz,
   quizKey,
   topics,
   type Mode,
+  type Part,
   type Question,
   type Topic,
 } from "@/lib/quizzes";
 import { actions, useProgress } from "@/lib/progress";
 import { speak } from "@/lib/speak";
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-type Run = { topic: Topic; partId: string; mode: Mode; questions: Question[] };
-
 export default function QuizPage() {
-  const [topicId, setTopicId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>("meaning");
-  const [run, setRun] = useState<Run | null>(null);
+  return (
+    <Suspense>
+      <TestRoute />
+    </Suspense>
+  );
+}
+
+function Notice({ title, text, href }: { title: string; text?: string; href: string }) {
+  return (
+    <div className="mx-auto max-w-xl py-16 text-center">
+      <p className="text-lg font-semibold">{title}</p>
+      {text && <p className="mt-1 text-muted">{text}</p>}
+      <Link href={href} className="mt-4 inline-block rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
+        Back to the map
+      </Link>
+    </div>
+  );
+}
+
+function TestRoute() {
+  const params = useSearchParams();
+  const scores = useProgress().bestScores;
+  const topic = topics.find((t) => t.id === params.get("t"));
+  const partId = params.get("p");
+  const part = topic && (topic.parts.find((p) => p.id === partId) ?? grandsOf(topic).find((g) => g.id === partId));
+  if (!topic || !part) return <Notice title="Pick a test from the map." href="/" />;
+  const isGrand = !topic.parts.includes(part);
+  const back = sectionHref(sectionOfTopic(topic.id));
+  // A Grand Test opens once every test of its topic is done, also when its address is typed in.
+  if (isGrand && !grandOpen(scores, topic)) {
+    return <Notice title="This Grand Test is locked." text={`Finish all the tests of ${topic.title} first.`} href={back} />;
+  }
+  const asked = params.get("m") as Mode | null;
+  // The key starts the test afresh when "Next test" changes the address.
+  return <Test key={`${topic.id}/${part.id}`} topic={topic} part={part} isGrand={isGrand} back={back} askedMode={asked && topic.modes.includes(asked) ? asked : null} />;
+}
+
+function Test({ topic, part, isGrand, back, askedMode }: { topic: Topic; part: Part; isGrand: boolean; back: string; askedMode: Mode | null }) {
+  const router = useRouter();
+  const scores = useProgress().bestScores;
+  const make = (m: Mode) => (isGrand ? grandTest(topic, part.id, m) : partQuiz(topic, topic.parts.indexOf(part), m));
+  const [mode, setMode] = useState<Mode>(askedMode ?? topic.modes[0]);
+  // A topic with one question type starts at once; with several, the type is chosen first
+  // (it comes in the address when "Next test" carries it over).
+  const startsAtOnce = askedMode !== null || topic.modes.length === 1;
+  const [questions, setQuestions] = useState<Question[] | null>(null);
+  // Drawn after the page is in the browser: questions are random, so a draw on the server would not match.
+  useEffect(() => {
+    if (startsAtOnce) setQuestions(make(mode));
+    // Once, when the test opens: the key on <Test> remounts it for another test.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [current, setCurrent] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [results, setResults] = useState<boolean[]>([]);
-  const progress = useProgress();
-  const scores = progress.bestScores;
 
-  const topic = topics.find((t) => t.id === topicId) ?? null;
-  const finished = run !== null && results.length === run.questions.length && picked === null;
+  const label = part.title.replace(/\bPart (\d+)$/, "Test $1");
+  const finished = questions !== null && results.length === questions.length && picked === null;
 
-  const openTopic = (t: Topic) => {
-    setTopicId(t.id);
-    setMode(t.modes[0]);
-    window.scrollTo({ top: 0 });
-  };
-
-  const start = (t: Topic, partId: string, m: Mode) => {
-    const i = t.parts.findIndex((p) => p.id === partId);
-    setRun({ topic: t, partId, mode: m, questions: i < 0 ? grandTest(t, partId, m) : partQuiz(t, i, m) });
+  const start = () => {
+    setQuestions(make(mode));
     setCurrent(0);
     setPicked(null);
     setResults([]);
@@ -56,17 +97,17 @@ export default function QuizPage() {
   };
 
   const choose = (opt: string) => {
-    if (!run || picked !== null) return;
-    const q = run.questions[current];
+    if (!questions || picked !== null) return;
+    const q = questions[current];
     setPicked(opt);
     setResults((r) => [...r, opt === q.answer]);
     if (q.promptIsDeva || q.mode === "toSanskrit") speak(q.item.deva);
   };
 
   const next = () => {
-    if (!run) return;
-    if (current + 1 >= run.questions.length) {
-      actions.recordQuiz(quizKey(run.topic.id, run.partId, run.mode), results.filter(Boolean).length, run.questions.length);
+    if (!questions) return;
+    if (current + 1 >= questions.length) {
+      actions.recordQuiz(quizKey(topic.id, part.id, mode), results.filter(Boolean).length, questions.length);
     } else {
       setCurrent((c) => c + 1);
     }
@@ -75,195 +116,53 @@ export default function QuizPage() {
 
   // Keyboard: 1–4 to answer, Enter to continue.
   useEffect(() => {
-    if (!run || finished) return;
+    if (!questions || finished) return;
     const onKey = (e: KeyboardEvent) => {
       const n = Number(e.key);
-      if (picked === null && n >= 1 && n <= run.questions[current].options.length) choose(run.questions[current].options[n - 1]);
+      if (picked === null && n >= 1 && n <= questions[current].options.length) choose(questions[current].options[n - 1]);
       // A focused button gets its own click from Enter; calling next() here too would skip a question.
-      else if (picked !== null && e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) next();
+      else if (picked !== null && e.key === "Enter" && !(e.target instanceof Element && e.target.closest("a, button"))) next();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  // ---------- Topic list
-  if (!topic) {
+  if (!questions && startsAtOnce) return null; // one frame, until the questions are drawn
+
+  // ---------- Before the test: choose the question type
+  if (!questions) {
+    const best = bestOf(scores, topic.id, part.id);
     return (
-      <div>
-        <PageHeader
-          deva="परीक्षा"
-          title="Quiz"
-          subtitle="Every topic is split into short tests. Finish all the tests of a topic to unlock its Grand Tests."
-        />
-        <div className="space-y-10">
-          {groups.map((g) => (
-            <section key={g.id}>
-              <h2 className="mb-3 text-xl font-semibold">
-                {g.title} · <span className="deva text-accent">{g.deva}</span>
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {topics
-                  .filter((t) => t.group === g.id)
-                  .map((t) => {
-                    const done = t.parts.filter((p) => isDone(scores, t.id, p.id)).length;
-                    const tGrands = grandsOf(t);
-                    const grandScores = tGrands.map((g) => bestOf(scores, t.id, g.id)).filter((v) => v !== undefined);
-                    const grand = grandScores.length ? Math.max(...grandScores) : undefined;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => openTopic(t)}
-                        data-spotlight
-                        className="flex flex-col rounded-2xl border border-line bg-surface p-4 text-left hover:border-accent"
-                      >
-                        <span className="flex items-center gap-3">
-                          <span className="deva flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-lg text-accent">
-                            {t.icon}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block font-medium">{t.title}</span>
-                            <span className="deva block text-sm text-muted">{t.deva}</span>
-                          </span>
-                        </span>
-                        <span className="mt-3 flex items-center justify-between text-sm text-muted">
-                          <span>
-                            {t.parts.length > 0 && <>{done} / {plural(t.parts.length, "test")}</>}
-                          </span>
-                          {tGrands.length > 0 && (
-                            <span>{grand !== undefined ? `🏆 ${grand}%` : done === t.parts.length ? "🏆 Grand Test ready" : "🔒 Grand Test"}</span>
-                          )}
-                        </span>
-                        <ProgressBar value={t.parts.length ? (done / t.parts.length) * 100 : grand !== undefined ? 100 : 0} className="mt-2" />
-                      </button>
-                    );
-                  })}
-              </div>
-            </section>
-          ))}
+      <div className="mx-auto max-w-xl">
+        <Link href={back} className="text-sm text-muted hover:text-ink">
+          ← Back to the map
+        </Link>
+        <div className="mt-6 rounded-3xl border border-line bg-surface p-6 text-center">
+          <p className="deva text-lg text-accent">{topic.deva}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-[-0.02em]">{topic.title}</h1>
+          <p className="mt-1 text-muted">
+            {isGrand ? "🏆 " : ""}
+            {label} · {partMarks(part)} marks{best !== undefined ? ` · Best score: ${best}%` : ""}
+          </p>
+          {part.subtitle && <p className="deva mt-1 text-lg text-muted">{part.subtitle}</p>}
+          <p className="mb-3 mt-6 font-medium">Question type</p>
+          <Tabs value={mode} onChange={setMode} options={topic.modes.map((m) => ({ value: m, label: modeLabels[m] }))} />
+          <button type="button" onClick={start} className="mt-6 block w-full rounded-full bg-accent py-3 font-medium text-accent-ink">
+            Start
+          </button>
         </div>
       </div>
     );
   }
-
-  // ---------- A topic's parts
-  if (!run) {
-    const done = topic.parts.filter((p) => isDone(scores, topic.id, p.id)).length;
-    const unlocked = done === topic.parts.length;
-    const left = topic.parts.length - done;
-    const tGrands = grandsOf(topic);
-    const grandCount = tGrands.length === 1 ? `a ${partMarks(tGrands[0])}-mark Grand Test` : tGrands.length ? `${tGrands.length} Grand Tests` : "";
-    return (
-      <div>
-        <button type="button" onClick={() => setTopicId(null)} className="mb-6 text-sm text-muted hover:text-ink">
-          ← All topics
-        </button>
-        <PageHeader
-          deva={topic.deva}
-          title={topic.title}
-          subtitle={[
-            topic.parts.length > 0 && `${plural(topic.parts.length, "test")} covering all of ${topic.title}`,
-            grandCount,
-          ]
-            .filter(Boolean)
-            .join(", then ")
-            .replace(/^a/, "A")}
-        />
-        {topic.modes.length > 1 && (
-          <div className="mb-6">
-            <p className="mb-3 font-medium">Question type</p>
-            <Tabs value={mode} onChange={setMode} options={topic.modes.map((m) => ({ value: m, label: modeLabels[m] }))} />
-          </div>
-        )}
-
-        {topic.parts.length > 0 && (
-          <>
-            <div className="mb-3 flex items-center gap-3 text-sm text-muted">
-              <span>
-                {done} of {plural(topic.parts.length, "test")} done
-              </span>
-              <ProgressBar value={(done / topic.parts.length) * 100} className="flex-1" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {topic.parts.map((p) => {
-                const best = bestOf(scores, topic.id, p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => start(topic, p.id, mode)}
-                    data-spotlight
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4 text-left hover:border-accent"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-lg">{p.title}</span>
-                      {p.subtitle && <span className="block truncate text-sm text-muted">{p.subtitle}</span>}
-                    </span>
-                    <span className="shrink-0 text-right text-sm">
-                      {best !== undefined ? (
-                        <span className="rounded-full bg-good-soft px-2.5 py-0.5 font-medium text-good">✓ {best}%</span>
-                      ) : (
-                        <span className="text-muted">{partMarks(p)} marks</span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        <div className="mt-6 space-y-3">
-          {tGrands.map((g) => {
-            const best = bestOf(scores, topic.id, g.id);
-            return (
-              <div
-                key={g.id}
-                className={`flex flex-wrap items-center justify-between gap-4 rounded-3xl p-6 ${
-                  unlocked ? "bg-accent text-accent-ink" : "border border-line bg-surface"
-                }`}
-              >
-                <div>
-                  <p className="text-xl font-semibold">
-                    {unlocked ? "🏆" : "🔒"} {g.title} · {partMarks(g)} marks
-                  </p>
-                  <p className={`text-sm ${unlocked ? "opacity-90" : "text-muted"}`}>
-                    {unlocked
-                      ? `${g.subtitle ?? `Questions from all of ${topic.title}`}${best !== undefined ? ` · Best score: ${best}%` : ""}`
-                      : `Finish ${topic.parts.length === 1 ? "the test" : `all ${topic.parts.length} tests`} to unlock it (${left} left).`}
-                  </p>
-                </div>
-                {unlocked && (
-                  <button
-                    type="button"
-                    onClick={() => start(topic, g.id, mode)}
-                    className="rounded-full bg-accent-ink px-6 py-3 font-medium text-accent shadow-sm hover:shadow-md"
-                  >
-                    Start {g.title} →
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const partIndex = run.topic.parts.findIndex((p) => p.id === run.partId);
-  const isGrand = partIndex < 0;
-  const runGrands = grandsOf(run.topic);
-  const grandIndex = runGrands.findIndex((g) => g.id === run.partId);
-  const runTitle = isGrand ? runGrands[grandIndex].title : run.topic.parts[partIndex].title;
 
   // ---------- Results
   if (finished) {
     const correct = results.filter(Boolean).length;
-    const pct = Math.round((correct / run.questions.length) * 100);
-    const missed = run.questions.filter((q, i) => !results[i] && run.questions.findIndex((x, j) => !results[j] && x.item.id === q.item.id) === i);
-    const nextPart = !isGrand && partIndex + 1 < run.topic.parts.length ? run.topic.parts[partIndex + 1] : null;
-    const nextGrand = isGrand ? runGrands[grandIndex + 1] : allDoneFirstGrand(run.topic, scores);
+    const pct = Math.round((correct / questions.length) * 100);
+    const missed = questions.filter((q, i) => !results[i] && questions.findIndex((x, j) => !results[j] && x.item.id === q.item.id) === i);
+    // The next test of the topic, if it is open: a Grand Test waits until every test is done.
+    const after = nextTest(topic.id, part.id);
+    const following = after && stepOpen({ lessons: {}, bestScores: scores }, after) ? after : undefined;
     return (
       <div className="mx-auto max-w-xl text-center">
         <motion.p
@@ -275,10 +174,10 @@ export default function QuizPage() {
           {pct === 100 ? "🏆" : pct >= 70 ? "🎉" : pct >= 40 ? "👍" : "📚"}
         </motion.p>
         <p className="mt-4 text-sm text-muted">
-          {run.topic.title} · {runTitle}
+          {topic.title} · {label}
         </p>
         <h1 className="mt-1 text-3xl font-semibold">
-          {correct} / {run.questions.length} marks
+          {correct} / {questions.length} marks
         </h1>
         <p className="deva mt-1 text-xl text-accent">{pct >= 70 ? "साधु! (Well done!)" : "अभ्यासं कुरु (Keep practising)"}</p>
         <p className="mt-2 text-muted">+{correct * 10} XP earned</p>
@@ -304,48 +203,46 @@ export default function QuizPage() {
         )}
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <button type="button" onClick={() => start(run.topic, run.partId, run.mode)} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
+          <button type="button" onClick={start} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
             Try again
           </button>
-          {nextPart ? (
-            <button type="button" onClick={() => start(run.topic, nextPart.id, run.mode)} className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-              Next test →
+          {following && (
+            <button
+              type="button"
+              onClick={() => router.replace(testHref(topic.id, following.part.id, mode))}
+              className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink"
+            >
+              {following.grand ? following.label : "Next test"} →
             </button>
-          ) : (
-            nextGrand && (
-              <button type="button" onClick={() => start(run.topic, nextGrand.id, run.mode)} className="rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-                {nextGrand.title} →
-              </button>
-            )
           )}
-          <button type="button" onClick={() => setRun(null)} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
-            All tests
-          </button>
+          <Link href={back} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
+            Back to the map
+          </Link>
         </div>
       </div>
     );
   }
 
   // ---------- Question
-  const q = run.questions[current];
+  const q = questions[current];
   // One prompt size for the whole quiz, so it doesn't jump between questions.
   // Word-only tests draw at random, so they use the smaller size every time, not just when a long word comes up.
-  const promptSize = q.mode === "form" || run.questions.some((x) => x.promptIsDeva && x.prompt.length > 12) ? "text-4xl" : "text-6xl";
+  const promptSize = q.mode === "form" || questions.some((x) => x.promptIsDeva && x.prompt.length > 12) ? "text-4xl" : "text-6xl";
   return (
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-4">
-        <button type="button" onClick={() => setRun(null)} className="text-muted hover:text-ink" aria-label="Quit quiz">
+        <Link href={back} className="text-muted hover:text-ink" aria-label="Quit test">
           ✕
-        </button>
-        <ProgressBar value={((current + (picked ? 1 : 0)) / run.questions.length) * 100} className="flex-1" />
+        </Link>
+        <ProgressBar value={((current + (picked ? 1 : 0)) / questions.length) * 100} className="flex-1" />
         <span className="text-sm tabular-nums text-muted">
-          {current + 1}/{run.questions.length}
+          {current + 1}/{questions.length}
         </span>
       </div>
       {/* Word-only tests: a title like "Verbs · लट्" would give away the lakara, root or gender. */}
       {q.mode !== "form" && (
         <p className="mt-3 text-center text-sm text-muted">
-          {run.topic.title} · {runTitle}
+          {topic.title} · {label}
         </p>
       )}
 
@@ -425,18 +322,13 @@ export default function QuizPage() {
               </p>
             </div>
             <button type="button" onClick={next} className="shrink-0 rounded-full bg-accent px-5 py-2.5 font-medium text-accent-ink">
-              {current + 1 >= run.questions.length ? "Finish" : "Next →"}
+              {current + 1 >= questions.length ? "Finish" : "Next →"}
             </button>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
-}
-
-/** The test after the last part: the first Grand Test, once every part is done. */
-function allDoneFirstGrand(topic: Topic, scores: Record<string, number>) {
-  return topic.parts.every((p) => isDone(scores, topic.id, p.id)) ? grandsOf(topic)[0] : undefined;
 }
 
 // Sentence translation, like Duolingo: the sentence is given in English and its Sanskrit words are jumbled
@@ -458,9 +350,9 @@ function SentenceBuilder({ question: q, locked, onCheck }: { question: Question;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Enter on a button elsewhere (quit, speak) keeps its normal meaning.
-      const focused = document.activeElement;
-      if (e.key !== "Enter" || locked || (focused instanceof HTMLButtonElement && !root.current?.contains(focused))) return;
+      // Enter on a link or button elsewhere (quit, speak) keeps its normal meaning.
+      const control = document.activeElement?.closest("a, button");
+      if (e.key !== "Enter" || locked || (control && !root.current?.contains(control))) return;
       e.preventDefault(); // otherwise Enter also presses whichever tile has focus
       check();
     };

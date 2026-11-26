@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Dropdown, snappy, spring } from "@/components/ui";
@@ -11,24 +11,26 @@ import { actions, levelFor, useProgress } from "@/lib/progress";
 import { logOut } from "@/lib/session";
 
 export const links = [
-  { href: "/", label: "Home", deva: "गृहम्", icon: "🏠" },
-  { href: "/alphabet", label: "Alphabet", deva: "वर्णमाला", icon: "अ" },
-  { href: "/vocabulary", label: "Words", deva: "शब्दाः", icon: "📖" },
-  { href: "/quiz", label: "Quiz", deva: "परीक्षा", icon: "🎯" },
-  { href: "/grammar", label: "Grammar", deva: "व्याकरणम्", icon: "📐" },
-  { href: "/advanced", label: "Advanced", deva: "उन्नतव्याकरणम्", icon: "🎓" },
-  { href: "/phrases", label: "Phrases", deva: "वाक्यानि", icon: "💬" },
+  { href: "/", label: "Learn", icon: "🗺️" },
+  { href: "/alphabet", label: "Alphabet", icon: "अ" },
+  { href: "/vocabulary", label: "Words", icon: "📖" },
+  { href: "/grammar", label: "Grammar", icon: "📐" },
+  { href: "/advanced", label: "Advanced", icon: "🎓" },
+  { href: "/phrases", label: "Phrases", icon: "💬" },
 ];
+
+// Lessons and tests are steps of the map, so they belong to Learn, not to the reference pages.
+const IN_A_STEP = ["/vocabulary/lesson", "/quiz"];
 
 export default function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { xp, streak, learned } = useProgress();
   const { level } = levelFor(xp);
   const [hovered, setHovered] = useState<string | null>(null);
 
   if (pathname === "/login") return null;
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const inStep = IN_A_STEP.some((p) => pathname.startsWith(p));
+  const isActive = (href: string) => (href === "/" ? pathname === "/" || inStep : !inStep && pathname.startsWith(href));
 
   return (
     <>
@@ -40,7 +42,7 @@ export default function Nav() {
           </Link>
 
           <nav className="hidden flex-1 items-center gap-1 md:flex" onPointerLeave={() => setHovered(null)}>
-            {links.slice(1).map((l) => {
+            {links.map((l) => {
               const active = isActive(l.href);
               return (
                 <Link
@@ -96,12 +98,10 @@ export default function Nav() {
                 </div>
               }
               items={[
-                { key: "home", label: "Dashboard" },
                 { key: "reset", label: "Reset progress", danger: true },
                 { key: "logout", label: "Log out" },
               ]}
               onSelect={(key) => {
-                if (key === "home") router.push("/");
                 if (key === "reset" && window.confirm("Reset all XP and learned words? This can't be undone.")) actions.reset();
                 if (key === "logout") {
                   logOut();
@@ -116,7 +116,7 @@ export default function Nav() {
 
       {/* Mobile tab bar. Hidden in a lesson, like Duolingo, so the Check button never sits behind it. */}
       {!pathname.startsWith("/vocabulary/lesson") && (
-      <nav className="material-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-7 border-t border-line/60 pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="material-bar fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line/60 pb-[env(safe-area-inset-bottom)] md:hidden">
         {links.map((l) => {
           const active = isActive(l.href);
           return (

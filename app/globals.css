@@ -158,24 +158,26 @@ body {
 
 /* Translucent material for floating chrome (nav, menus). */
 /* Menus float over busy content, so they stay close to opaque for legibility. */
+/* -webkit-backdrop-filter is written first on purpose: the other way round, the build keeps only the
+   prefixed line and Chrome and Firefox show no blur at all. */
 .material {
   background: var(--surface);
-  backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 .material-bar {
   background: color-mix(in srgb, var(--bg) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .material,
   .material-bar {
     background: var(--surface);
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 @media (prefers-contrast: more) {
@@ -196,6 +198,14 @@ body {
   [role="button"]:active { scale: 1; }
 }
 
-/* One-line word previews scroll sideways without a visible scrollbar. */
-.no-scrollbar { scrollbar-width: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
+/* One-line word previews scroll sideways. A finger swipes them, so touch screens show no scrollbar.
+   A mouse can't (a wheel only scrolls up and down), so it gets a thin scrollbar, and `Strip` lets it drag. */
+.strip { scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .strip {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+    padding-bottom: 0.625rem;
+  }
+}

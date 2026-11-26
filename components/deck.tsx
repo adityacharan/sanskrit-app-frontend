@@ -155,6 +155,65 @@ function Card({
   );
 }
 
+/* ---------------------------------------------------------------- Strip */
+
+/**
+ * A one-line row of chips that scrolls sideways. Touch scrolls it natively. A mouse has no way to
+ * (a wheel only scrolls up and down), so the row can be dragged with it and shows a thin scrollbar.
+ */
+export function Strip({ ref, children }: { ref?: React.RefObject<HTMLDivElement | null>; children: React.ReactNode }) {
+  const own = useRef<HTMLDivElement>(null);
+  const box = ref ?? own;
+  // True once a press has turned into a drag, so the click that ends it doesn't also pick a chip.
+  const dragged = useRef(false);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const el = box.current;
+    dragged.current = false;
+    if (!el || e.pointerType !== "mouse" || e.button !== 0) return;
+    // A press on the scrollbar is the browser's to handle.
+    if (e.clientY - el.getBoundingClientRect().top > el.clientHeight) return;
+    const startX = e.clientX;
+    const startLeft = el.scrollLeft;
+    const move = (m: PointerEvent) => {
+      const dx = m.clientX - startX;
+      if (!dragged.current && Math.abs(dx) < 6) return;
+      dragged.current = true;
+      el.scrollLeft = startLeft - dx;
+    };
+    const up = () => {
+      // The click that ends a drag comes right after this; one that never comes (released outside the
+      // strip) must not leave the flag set for the next, unrelated click.
+      setTimeout(() => (dragged.current = false), 0);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
+  return (
+    <div className="relative">
+      <div
+        ref={box}
+        onPointerDown={onPointerDown}
+        onClickCapture={(e) => {
+          if (!dragged.current) return;
+          dragged.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        className="strip flex gap-2 overflow-x-auto"
+      >
+        {children}
+      </div>
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-linear-to-l from-bg to-transparent" />
+    </div>
+  );
+}
+
 /* --------------------------------------------------------- Preview list */
 
 type Group = { label: React.ReactNode; from: number; to: number }; // item indexes [from, to)
@@ -245,12 +304,7 @@ export function PreviewList<T>({
           full(0, items.length)
         )
       ) : (
-        <div className="relative">
-          <div ref={strip} className="no-scrollbar flex gap-2 overflow-x-auto">
-            {items.map(chipButton)}
-          </div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-linear-to-l from-bg to-transparent" />
-        </div>
+        <Strip ref={strip}>{items.map(chipButton)}</Strip>
       )}
     </section>
   );

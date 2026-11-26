@@ -102,6 +102,9 @@ export type Exercise =
   | { kind: "meaning"; item: LessonItem; options: string[] } // Sanskrit shown, pick the English
   | { kind: "reverse"; item: LessonItem; options: string[] } // English shown, pick the Sanskrit
   | { kind: "build"; item: LessonItem; tiles: string[] } // English shown, build the Sanskrit from word tiles
+  | { kind: "listen"; item: LessonItem; options: string[] } // a word is heard, pick it from Sanskrit options
+  | { kind: "hear"; item: LessonItem; tiles: string[] } // a sentence is heard, build it from word tiles
+  | { kind: "blank"; item: LessonItem; words: string[]; gap: number; options: string[] } // one word missing, pick it
   | { kind: "match"; items: LessonItem[] }; // tap the pairs
 
 /** The words of a Sanskrit sentence as tiles: no punctuation or quotes. */
@@ -117,6 +120,7 @@ const buildable = (it: LessonItem) => it.kind === "sentence" && !/[/()…_]/.tes
 const WRONG_OPTIONS = 3;
 const WRONG_TILES = 4;
 const MATCH_PAIRS = 5;
+const EXTRA_EACH = 2; // listening and missing-word exercises per lesson
 
 /** Where wrong answers come from: the lesson's own unit first, then the rest of the tab. */
 export type Pool = { near: LessonItem[]; far: LessonItem[] };
@@ -153,10 +157,14 @@ function practiceQ(item: LessonItem, pool: Pool): Exercise {
   if (!buildable(item)) {
     return { kind: "reverse", item, options: shuffle([item.deva, ...wrongOptions(item, pool, (o) => o.deva, (o) => o.meaning)]) };
   }
+  return { kind: "build", item, tiles: shuffle([...tileWords(item.deva), ...spareWords(item, pool).slice(0, WRONG_TILES)]) };
+}
+
+// Spare words for a sentence: from sentences that are built from tiles themselves (no brackets, blanks
+// or slashes), the unit before the tab, and never a word that could make a second right sentence (`spareOk`).
+function spareWords(item: LessonItem, pool: Pool): string[] {
   const right = tileWords(item.deva);
   const has = new Set(right.map(sameWord));
-  // Spare tiles come only from sentences that are built from tiles themselves (no brackets, blanks or
-  // slashes), and never a word that could make a second right sentence (`spareOk`).
   const wordsOf = (l: LessonItem[]) =>
     shuffle(
       [...new Map(l.filter(buildable).flatMap((o) => tileWords(o.deva)).map((w) => [sameWord(w), w])).values()].filter(
@@ -164,13 +172,48 @@ function practiceQ(item: LessonItem, pool: Pool): Exercise {
       ),
     );
   const near = wordsOf(pool.near);
-  const others = [...near, ...wordsOf(pool.far).filter((w) => !near.includes(w))];
-  return { kind: "build", item, tiles: shuffle([...right, ...others.slice(0, WRONG_TILES)]) };
+  return [...near, ...wordsOf(pool.far).filter((w) => !near.some((n) => sameWord(n) === sameWord(w)))];
 }
+
+// Read aloud, an alternative ("जननी / माता"), a bracket or a blank can't be told apart from the plain item.
+const listenable = (it: LessonItem) => !/[/()…_]/.test(it.deva) && it.deva.length <= 40;
+
+/**
+ * The item is read aloud. A sentence is then built from its word tiles, like every other sentence
+ * exercise (a sentence is never offered whole among whole sentences); a word is picked from Sanskrit options.
+ */
+const listenQ = (item: LessonItem, pool: Pool): Exercise =>
+  buildable(item)
+    ? { kind: "hear", item, tiles: shuffle([...tileWords(item.deva), ...spareWords(item, pool).slice(0, WRONG_TILES)]) }
+    : { kind: "listen", item, options: shuffle([item.deva, ...wrongOptions(item, pool, (o) => o.deva, (o) => o.deva)]) };
+
+// A gap needs a sentence of three words or more, and a word that is in it only once.
+const gapsOf = (it: LessonItem) => {
+  const words = tileWords(it.deva).map(sameWord);
+  return buildable(it) && words.length >= 3 ? words.map((_, i) => i).filter((i) => words.indexOf(words[i]) === words.lastIndexOf(words[i])) : [];
+};
+
+/** The sentence with one word left out; pick the missing word. */
+function blankQ(item: LessonItem, pool: Pool): Exercise {
+  const words = tileWords(item.deva);
+  const gap = shuffle(gapsOf(item))[0];
+  return { kind: "blank", item, words, gap, options: shuffle([words[gap], ...spareWords(item, pool).slice(0, WRONG_OPTIONS)]) };
+}
+
+/** Whether `picked` fills the gap. */
+export const gapRight = (ex: Extract<Exercise, { kind: "blank" }>, picked: string) => sameWord(picked) === sameWord(ex.words[ex.gap]);
 
 /** A fresh copy of an exercise, with its options in a new order, to ask again after a mistake. */
 export const again = (ex: Exercise, pool: Pool): Exercise =>
-  ex.kind === "meaning" ? meaningQ(ex.item, pool) : ex.kind === "reverse" || ex.kind === "build" ? practiceQ(ex.item, pool) : ex;
+  ex.kind === "meaning"
+    ? meaningQ(ex.item, pool)
+    : ex.kind === "reverse" || ex.kind === "build"
+      ? practiceQ(ex.item, pool)
+      : ex.kind === "listen" || ex.kind === "hear"
+        ? listenQ(ex.item, pool)
+        : ex.kind === "blank"
+          ? blankQ(ex.item, pool)
+          : ex;
 
 /** Answer-checking for the build exercise: Sanskrit word order is free, so any order of the right words counts. */
 export const builtRight = (item: LessonItem, built: string[]) =>
@@ -183,7 +226,8 @@ export const poolFor = (tab: VocabTab, lesson: Lesson): Pool => ({
 
 /**
  * The lesson, like Duolingo: each new item is shown and then asked, two at a time; then a round of
- * matching pairs; then every item is asked once more, in a new order.
+ * matching pairs; then up to two listening and two missing-word exercises; then every item is asked
+ * once more, in a new order.
  * A sentence is never asked whole with whole meanings to choose from (the owner asked for this): it is
  * given in English and built from its jumbled Sanskrit word tiles, both times. Words, and sentences that
  * can't be cut into tiles, are asked by meaning first and then picked from Sanskrit options.
@@ -202,6 +246,12 @@ export function buildLesson(lesson: Lesson, pool: Pool): Exercise[] {
     (it, i) => short.findIndex((o) => o.deva === it.deva || o.meaning === it.meaning) === i,
   );
   if (pairs.length >= 3) steps.push({ kind: "match", items: shuffle(pairs).slice(0, MATCH_PAIRS) });
+  // Two more kinds of practice (2026-11-26), on a few of the lesson's items and added to the rounds above,
+  // not instead of them: hear it and pick it, and pick a sentence's missing word.
+  const gaps = shuffle(items.filter((it) => gapsOf(it).length > 0)).slice(0, EXTRA_EACH);
+  const rest = items.filter((it) => listenable(it) && !gaps.includes(it));
+  const heard = shuffle(rest.length >= EXTRA_EACH ? rest : items.filter(listenable)).slice(0, EXTRA_EACH);
+  steps.push(...shuffle([...heard.map((it) => listenQ(it, pool)), ...gaps.map((it) => blankQ(it, pool))]));
   for (const it of shuffle(items)) steps.push(practiceQ(it, pool));
   return steps;
 }

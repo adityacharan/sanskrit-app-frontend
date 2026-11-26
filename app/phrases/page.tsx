@@ -48,7 +48,7 @@ export default function PhrasesPage() {
       ) : (
         <div className="mt-6 space-y-4">
           {shlokas.map((s) => (
-            <article key={s.title} data-spotlight className="rounded-3xl border border-line bg-surface p-6">
+            <article key={s.title} className="rounded-3xl border border-line bg-surface p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold">{s.title}</h2>
@@ -87,7 +87,7 @@ function PhraseGrid({ items, showTranslit, showMeaning }: { items: Phrase[]; sho
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {items.map((p) => (
-        <div key={p.translit} data-spotlight className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4">
+        <div key={p.translit} className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4">
           <SpeakButton text={p.deva} />
           <div>
             <p className="deva text-2xl">{p.deva}</p>

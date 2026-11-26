@@ -181,6 +181,14 @@ export function Dropdown({
     return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
+  // A long menu opened low on the screen (the fourteen sections on a phone) would run off the bottom,
+  // so the page scrolls just enough to show all of it. The scroll margin on the menu clears the bottom bar.
+  useEffect(() => {
+    if (!open) return;
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById(`${id}-menu`)?.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
+  }, [open, id]);
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!open) {
       if (["ArrowDown", "ArrowUp"].includes(e.key)) {
@@ -241,7 +249,7 @@ export function Dropdown({
             exit={{ opacity: 0, scale: 0.96, y: -6, filter: "blur(4px)" }}
             transition={snappy}
             style={{ transformOrigin: align === "start" ? "top left" : "top right" }}
-            className={`material absolute top-full z-50 mt-2 max-h-[min(28rem,70vh)] min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.25)] ${
+            className={`material absolute top-full z-50 mt-2 max-h-[min(28rem,70vh)] scroll-mb-24 min-w-full w-max max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.25)] ${
               align === "start" ? "left-0" : "right-0"
             }`}
             onPointerLeave={() => setActive(-1)}

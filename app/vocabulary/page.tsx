@@ -4,7 +4,9 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Chevron, Dropdown, PageHeader, ProgressBar, SpeakButton, Tabs } from "@/components/ui";
 import { Deck, deckSize, PreviewList, useDeck } from "@/components/deck";
-import { BookList, LessonPath } from "@/components/lessons";
+import Link from "next/link";
+import { BookList } from "@/components/lessons";
+import { sectionHref, sections, stepDone, stepsOf } from "@/lib/course";
 import { numberGenderNote, type Category } from "@/lib/data";
 import { vocabTabs } from "@/lib/lessons";
 import { actions, useProgress } from "@/lib/progress";
@@ -29,7 +31,7 @@ function Vocabulary() {
       <PageHeader
         deva="शब्दाः"
         title="Vocabulary"
-        subtitle="Flip the cards to learn the words, then work through each tab's lessons, Duolingo-style, to practise every word and sentence."
+        subtitle="Every word card and sentence of the lessons, to look up and revise. The lessons themselves are on the map."
       />
 
       {/* Ten tabs wrap into five rows on a phone, so phones get a menu instead. */}
@@ -62,12 +64,36 @@ function Vocabulary() {
         <Tabs value={tab.slug} onChange={pick} options={vocabTabs.map((t) => ({ value: t.slug, label: `${t.icon} ${t.title}` }))} />
       </div>
 
+      <LessonsLink slug={tab.slug} title={tab.title} />
       {/* Both reset when the tab changes. Their keys must differ: with one key for two siblings React
           loses track of the old deck, which then stays on the page, dead, above the new one. */}
       {tab.category && <WordDeck key={`deck:${tab.slug}`} category={tab.category} />}
-      <LessonPath tab={tab} />
-      <BookList key={`book:${tab.slug}`} units={tab.units.filter((u) => u.id !== "words")} />
+      <BookList key={`book:${tab.slug}`} units={tab.units.filter((u) => u.id !== "words")} startOpen={!tab.category} />
     </div>
+  );
+}
+
+// The way back to this topic's lessons and tests, which live on the course map.
+function LessonsLink({ slug, title }: { slug: string; title: string }) {
+  const progress = useProgress();
+  const steps = stepsOf(sections.find((s) => s.id === slug)!);
+  const done = steps.filter((s) => stepDone(progress, s)).length;
+  return (
+    <Link
+      href={sectionHref(slug)}
+      data-spotlight="light"
+      className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-accent px-5 py-4 text-accent-ink"
+    >
+      <span className="min-w-0">
+        <span className="block text-sm opacity-90">
+          {done} of {steps.length} steps done
+        </span>
+        <span className="block font-semibold">{title} lessons on the map</span>
+      </span>
+      <span className="shrink-0 text-xl" aria-hidden>
+        →
+      </span>
+    </Link>
   );
 }
 

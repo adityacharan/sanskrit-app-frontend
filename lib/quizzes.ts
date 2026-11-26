@@ -66,13 +66,6 @@ const FORM_TEST_MARKS = 20; // a verb, pronoun or noun test
 const FORM_GRAND_MARKS = 30;
 export const GRAND = "grand";
 
-export const groups: { id: GroupId; title: string; deva: string }[] = [
-  { id: "alphabet", title: "Alphabet", deva: "वर्णमाला" },
-  { id: "words", title: "Words", deva: "शब्दाः" },
-  { id: "phrases", title: "Phrases", deva: "वाक्यानि" },
-  { id: "grammar", title: "Grammar", deva: "व्याकरणम्" },
-  { id: "advanced", title: "Advanced Grammar", deva: "उन्नतव्याकरणम्" },
-];
 
 export const modeLabels: Record<Mode, string> = {
   meaning: "Sanskrit → English",

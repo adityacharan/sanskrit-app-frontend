@@ -8,21 +8,24 @@ import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProgressBar, SpeakButton } from "@/components/ui";
+import { sectionHref } from "@/lib/course";
 import {
   again,
   buildLesson,
   builtRight,
   findLesson,
+  gapRight,
   isUnlocked,
   lessonHref,
   poolFor,
+  tileWords,
   type Exercise,
   type Lesson,
   type LessonItem,
   type VocabTab,
 } from "@/lib/lessons";
 import { actions, useProgress } from "@/lib/progress";
-import { shuffle } from "@/lib/speak";
+import { shuffle, speak } from "@/lib/speak";
 
 export default function LessonPage() {
   return (
@@ -42,8 +45,8 @@ function LessonRoute() {
       <div className="mx-auto max-w-xl py-16 text-center">
         <p className="text-lg font-semibold">This lesson is locked.</p>
         <p className="mt-1 text-muted">Finish lesson {found.lesson.n - 1} of this unit first.</p>
-        <Link href={`/vocabulary?c=${found.tab.slug}#lessons`} className="mt-4 inline-block rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-          Back to lessons
+        <Link href={sectionHref(found.tab.slug)} className="mt-4 inline-block rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
+          Back to the map
         </Link>
       </div>
     );
@@ -52,8 +55,8 @@ function LessonRoute() {
     return (
       <div className="mx-auto max-w-xl py-16 text-center">
         <p className="text-lg font-semibold">This lesson doesn&apos;t exist.</p>
-        <Link href="/vocabulary" className="mt-4 inline-block rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
-          Back to vocabulary
+        <Link href="/" className="mt-4 inline-block rounded-full bg-accent px-6 py-3 font-medium text-accent-ink">
+          Back to the map
         </Link>
       </div>
     );
@@ -90,9 +93,10 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
   useEffect(() => {
     if (finished && !recorded.current) {
       recorded.current = true;
-      actions.completeLesson(lesson.key, pct);
+      // Only a tab's own word cards count as "words learned"; the book's items have no card.
+      actions.completeLesson(lesson.key, pct, lesson.unit.id === "words" ? lesson.items.map((it) => it.id) : []);
     }
-  }, [finished, lesson.key, pct]);
+  }, [finished, lesson, pct]);
 
   const markMissed = () => at < total && setMissed((m) => new Set(m).add(at));
 
@@ -109,14 +113,16 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
     setPlaced([]);
   };
 
-  const canCheck = ex && status === "idle" && (ex.kind === "build" ? placed.length > 0 : ex.kind === "meaning" || ex.kind === "reverse" ? picked !== null : false);
+  const hasOptions = ex && (ex.kind === "meaning" || ex.kind === "reverse" || ex.kind === "listen" || ex.kind === "blank");
+  const canCheck = ex && status === "idle" && (ex.kind === "build" || ex.kind === "hear" ? placed.length > 0 : hasOptions ? picked !== null : false);
 
   const check = () => {
     if (!ex || !canCheck) return;
     let right = false;
     if (ex.kind === "meaning") right = picked === ex.item.meaning;
-    else if (ex.kind === "reverse") right = picked === ex.item.deva;
-    else if (ex.kind === "build") right = builtRight(ex.item, placed.map((i) => ex.tiles[i]));
+    else if (ex.kind === "reverse" || ex.kind === "listen") right = picked === ex.item.deva;
+    else if (ex.kind === "blank") right = picked !== null && gapRight(ex, picked);
+    else if (ex.kind === "build" || ex.kind === "hear") right = builtRight(ex.item, placed.map((i) => ex.tiles[i]));
     setStatus(right ? "right" : "wrong");
     if (!right) {
       markMissed();
@@ -149,7 +155,7 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
         e.preventDefault();
         if (status !== "idle" || ex.kind === "intro") advance();
         else check();
-      } else if (status === "idle" && (ex.kind === "meaning" || ex.kind === "reverse") && /^[1-9]$/.test(e.key)) {
+      } else if (status === "idle" && (ex.kind === "meaning" || ex.kind === "reverse" || ex.kind === "listen" || ex.kind === "blank") && /^[1-9]$/.test(e.key)) {
         const opt = ex.options[Number(e.key) - 1];
         if (opt !== undefined) setPicked(opt);
       }
@@ -158,7 +164,7 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const backHref = `/vocabulary?c=${tab.slug}#lessons`;
+  const backHref = sectionHref(tab.slug);
 
   if (finished) {
     return (
@@ -191,7 +197,7 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
             </button>
           )}
           <Link href={backHref} className="rounded-full border border-line bg-surface px-6 py-3 font-medium hover:border-accent">
-            All lessons
+            Back to the map
           </Link>
         </div>
       </div>
@@ -219,7 +225,9 @@ function Player({ tab, lesson, next }: { tab: VocabTab; lesson: Lesson; next?: L
         {(ex.kind === "meaning" || ex.kind === "reverse") && (
           <Choice key={at} ex={ex} picked={picked} status={status} onPick={setPicked} />
         )}
-        {ex.kind === "build" && <Build key={at} ex={ex} placed={placed} setPlaced={setPlaced} status={status} />}
+        {(ex.kind === "build" || ex.kind === "hear") && <Build key={at} ex={ex} placed={placed} setPlaced={setPlaced} status={status} />}
+        {ex.kind === "listen" && <Listen key={at} ex={ex} picked={picked} status={status} onPick={setPicked} />}
+        {ex.kind === "blank" && <Blank key={at} ex={ex} picked={picked} status={status} onPick={setPicked} />}
         {ex.kind === "match" && (
           <Match key={at} items={ex.items} onMistake={markMissed} onDone={() => setStatus("right")} />
         )}
@@ -290,41 +298,184 @@ function Choice({
   status: Status;
   onPick: (v: string) => void;
 }) {
-  const answer = ex.kind === "meaning" ? ex.item.meaning : ex.item.deva;
   return (
     <div>
       <p className="text-sm text-muted">{ex.kind === "meaning" ? "What does this mean?" : "How do you say this in Sanskrit?"}</p>
       <Prompt item={ex.item} deva={ex.kind === "meaning"} />
-      <div className="mt-6 grid gap-3">
-        {ex.options.map((opt, i) => {
-          const state =
-            status === "idle" ? (opt === picked ? "picked" : "idle") : opt === answer ? "right" : opt === picked ? "wrong" : "dim";
-          return (
-            <button
-              key={opt}
-              type="button"
-              data-option="1"
-              disabled={status !== "idle"}
-              onClick={() => onPick(opt)}
-              aria-pressed={opt === picked}
-              className={`flex items-center gap-3 rounded-2xl border-2 p-4 text-left ${
-                state === "picked"
-                  ? "border-accent bg-accent-soft"
-                  : state === "right"
-                    ? "border-good bg-good-soft"
-                    : state === "wrong"
-                      ? "border-bad bg-bad-soft"
-                      : state === "dim"
-                        ? "border-line bg-surface opacity-50"
-                        : "border-line bg-surface hover:border-accent/60"
-              }`}
-            >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs text-muted">{i + 1}</span>
-              <span className={ex.kind === "reverse" ? DEVA_OPTION : EN_OPTION}>{opt}</span>
-            </button>
-          );
-        })}
+      <Options
+        options={ex.options}
+        answer={ex.kind === "meaning" ? ex.item.meaning : ex.item.deva}
+        textClass={ex.kind === "reverse" ? DEVA_OPTION : EN_OPTION}
+        picked={picked}
+        status={status}
+        onPick={onPick}
+      />
+    </div>
+  );
+}
+
+// The numbered answers of a choice, listening or missing-word exercise.
+function Options({
+  options,
+  answer,
+  textClass,
+  picked,
+  status,
+  onPick,
+  columns = false,
+}: {
+  options: string[];
+  answer: string;
+  textClass: string;
+  picked: string | null;
+  status: Status;
+  onPick: (v: string) => void;
+  columns?: boolean;
+}) {
+  return (
+    <div className={`mt-6 grid gap-3 ${columns ? "grid-cols-2" : ""}`}>
+      {options.map((opt, i) => {
+        const state = status === "idle" ? (opt === picked ? "picked" : "idle") : opt === answer ? "right" : opt === picked ? "wrong" : "dim";
+        return (
+          <button
+            key={opt}
+            type="button"
+            data-option="1"
+            disabled={status !== "idle"}
+            onClick={() => onPick(opt)}
+            aria-pressed={opt === picked}
+            className={`flex items-center gap-3 rounded-2xl border-2 p-4 text-left ${
+              state === "picked"
+                ? "border-accent bg-accent-soft"
+                : state === "right"
+                  ? "border-good bg-good-soft"
+                  : state === "wrong"
+                    ? "border-bad bg-bad-soft"
+                    : state === "dim"
+                      ? "border-line bg-surface opacity-50"
+                      : "border-line bg-surface hover:border-accent/60"
+            }`}
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs text-muted">{i + 1}</span>
+            <span className={textClass}>{opt}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type Picking<K extends Exercise["kind"]> = { ex: Extract<Exercise, { kind: K }>; picked: string | null; status: Status; onPick: (v: string) => void };
+
+// The item is read aloud, with a button to hear it again. Where the browser has no voice for Devanagari,
+// or the learner can't listen just now, the romanization is shown to read instead, so the step is never a dead end.
+function Heard({ item, heard, read }: { item: LessonItem; heard: string; read: string }) {
+  const canSpeak = useCanSpeak();
+  const [asked, setAsked] = useState(false);
+  const reading = asked || canSpeak === false;
+  useEffect(() => {
+    if (canSpeak) speak(item.deva);
+  }, [canSpeak, item.deva]);
+  return (
+    <>
+      <p className="text-sm text-muted">{reading ? read : heard}</p>
+      <div className="mt-3 flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2">
+        {canSpeak !== false && (
+          <button
+            type="button"
+            onClick={() => speak(item.deva)}
+            aria-label="Listen again"
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-accent text-3xl text-accent-ink hover:brightness-105"
+          >
+            🔊
+          </button>
+        )}
+        {reading ? (
+          <p className="text-2xl font-semibold italic">{item.translit}</p>
+        ) : (
+          <button type="button" onClick={() => setAsked(true)} className="text-sm text-muted underline underline-offset-4 hover:text-ink">
+            Can&apos;t listen now? Read it instead
+          </button>
+        )}
       </div>
+    </>
+  );
+}
+
+// A word is read aloud; pick it from the Sanskrit options.
+function Listen({ ex, picked, status, onPick }: Picking<"listen">) {
+  return (
+    <div>
+      <Heard item={ex.item} heard="Tap what you hear" read="Pick the word that is read like this" />
+      <Options options={ex.options} answer={ex.item.deva} textClass={DEVA_OPTION} picked={picked} status={status} onPick={onPick} />
+    </div>
+  );
+}
+
+/** Whether this browser can read Devanagari aloud: null until its voices have loaded (Chrome loads them late). */
+function useCanSpeak() {
+  const [can, setCan] = useState<boolean | null>(null);
+  useEffect(() => {
+    const synth = typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : null;
+    if (!synth) {
+      setCan(false);
+      return;
+    }
+    const check = () => {
+      const ok = synth.getVoices().some((v) => /^(sa|hi)([-_]|$)/i.test(v.lang));
+      if (ok) setCan(true);
+      return ok;
+    };
+    if (check()) return;
+    synth.addEventListener("voiceschanged", check);
+    const giveUp = setTimeout(() => setCan((c) => c ?? false), 1500);
+    return () => {
+      synth.removeEventListener("voiceschanged", check);
+      clearTimeout(giveUp);
+    };
+  }, []);
+  return can;
+}
+
+// The sentence with one word left out; pick the missing word.
+function Blank({ ex, picked, status, onPick }: Picking<"blank">) {
+  const shown = status === "idle" ? picked : ex.words[ex.gap];
+  // The sentence as it is written, punctuation and all; `ex.words` are its words without punctuation.
+  let n = -1;
+  const parts = ex.item.deva
+    .trim()
+    .split(/\s+/)
+    .map((raw) => {
+      const word = tileWords(raw)[0];
+      if (!word) return { raw, index: -1, before: "", after: "" };
+      n++;
+      const at = raw.indexOf(word);
+      return { raw, index: n, before: at > 0 ? raw.slice(0, at) : "", after: at >= 0 ? raw.slice(at + word.length) : "" };
+    });
+  return (
+    <div>
+      <p className="text-sm text-muted">Pick the missing word</p>
+      <Prompt item={ex.item} deva={false} />
+      <p className={`mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-3 ${DEVA_PROMPT}`}>
+        {parts.map((part, i) =>
+          part.index === ex.gap ? (
+            <span key={i}>
+              {part.before}
+              <span
+                // Once checked, the gap holds the right word, so it is green whatever was picked.
+                className={`inline-block min-w-20 border-b-2 px-1 text-center ${status === "idle" ? "border-accent text-accent" : "border-good text-good"}`}
+              >
+                {shown ?? "\u00a0"}
+                <span className="sr-only">{shown ? "" : "(missing word)"}</span>
+              </span>
+              {part.after}
+            </span>
+          ) : (
+            <span key={i}>{part.raw}</span>
+          ),
+        )}
+      </p>
+      <Options options={ex.options} answer={ex.words[ex.gap]} textClass={DEVA_OPTION} picked={picked} status={status} onPick={onPick} columns />
     </div>
   );
 }
@@ -336,7 +487,7 @@ function Build({
   setPlaced,
   status,
 }: {
-  ex: Extract<Exercise, { kind: "build" }>;
+  ex: Extract<Exercise, { kind: "build" | "hear" }>;
   placed: number[];
   setPlaced: (f: (p: number[]) => number[]) => void;
   status: Status;
@@ -347,8 +498,14 @@ function Build({
   const placedTile = status === "right" ? "border-good bg-good-soft" : status === "wrong" ? "border-bad bg-bad-soft" : "border-line bg-surface hover:border-accent";
   return (
     <div>
-      <p className="text-sm text-muted">Pick the words to make this sentence in Sanskrit</p>
-      <Prompt item={ex.item} deva={false} />
+      {ex.kind === "hear" ? (
+        <Heard item={ex.item} heard="Pick the words you hear" read="Pick the words of the sentence that is read like this" />
+      ) : (
+        <>
+          <p className="text-sm text-muted">Pick the words to make this sentence in Sanskrit</p>
+          <Prompt item={ex.item} deva={false} />
+        </>
+      )}
       <div className="mt-6 flex min-h-16 flex-wrap items-center gap-2 border-y border-line py-3">
         {placed.map((t, i) => (
           <button
