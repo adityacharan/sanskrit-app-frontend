@@ -266,7 +266,9 @@ function Intro({ item }: { item: LessonItem }) {
     <div>
       <p className="text-center text-sm font-medium text-accent">{item.kind === "word" ? "New word" : "New sentence"}</p>
       {/* The speaker sits in the corner, so the Sanskrit stays centred over the lines below it. */}
-      <div className="relative mt-3 rounded-3xl border border-line bg-surface px-12 py-8 text-center">
+      {/* On a phone the card keeps one height whether the lines wrap or not: up to ten new items come in a
+          row (2026-11-27), and Continue must not move under the thumb from one to the next. */}
+      <div className="relative mt-3 flex min-h-64 flex-col justify-center rounded-3xl border border-line bg-surface px-12 py-8 text-center sm:min-h-0">
         <SpeakButton text={item.deva} className="absolute right-3 top-3" />
         <p className={DEVA_PROMPT}>{item.deva}</p>
         <p className="mt-2 italic text-muted">{item.translit}</p>

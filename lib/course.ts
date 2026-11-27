@@ -67,8 +67,10 @@ const testSection = (id: string, title: string, deva: string, icon: string, topi
 
 const groupTopics = (group: string) => topics.filter((t) => t.group === group).map((t) => t.id);
 
-// Lessons first, so a new learner starts with one; then the sections that are tests only.
+// The Alphabet comes first (the owner, 2026-11-27), then the lesson sections, then the rest of the sections
+// that are tests only.
 export const sections: Section[] = [
+  testSection("alphabet", "Alphabet", "वर्णमाला", "अ", ["alphabet"], { href: "/alphabet", label: "Letter flashcards" }),
   ...vocabTabs.map(
     (tab): Section => ({
       id: tab.slug,
@@ -88,7 +90,6 @@ export const sections: Section[] = [
     }),
   ),
   testSection("everyday", "Everyday sentences", "दैनिकवाक्यानि", "🗣️", ["spoken"], { href: "/phrases", label: "Read the sentences" }),
-  testSection("alphabet", "Alphabet", "वर्णमाला", "अ", ["alphabet"], { href: "/alphabet", label: "Letter flashcards" }),
   testSection("grammar", "Grammar", "व्याकरणम्", "📐", groupTopics("grammar"), { href: "/grammar", label: "Tables of forms" }),
   testSection("advanced", "Advanced Grammar", "उन्नतव्याकरणम्", "🎓", groupTopics("advanced"), { href: "/advanced", label: "Tables and numbers" }),
 ];

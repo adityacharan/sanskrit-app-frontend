@@ -1,7 +1,7 @@
 // Duolingo-style lessons for the vocabulary tabs (Edited_daily_Conversation.docx: "create in the similar
 // way of Duolingo … all words and sentences should be covered and don't repeat the words").
 // Every tab is a path of units; a unit is a tab's word cards or a section of the conversation book,
-// split in order into lessons of at most 8 items, so every item is taught in exactly one lesson.
+// split in order into lessons of at most 10 items, so every item is taught in exactly one lesson.
 
 import { categories, type Category } from "./data";
 import { bookUnit, type BookUnit } from "./book";
@@ -20,7 +20,8 @@ export type VocabTab = {
 };
 export type Lesson = { tab: string; unit: Unit; n: number; items: LessonItem[]; key: string };
 
-const LESSON_SIZE = 8;
+// Ten since 2026-11-27: the owner asked for the questions after every ten sentences (it was 8, asked in twos).
+const LESSON_SIZE = 10;
 
 const cat = (slug: string) => categories.find((c) => c.slug === slug)!;
 
@@ -59,7 +60,7 @@ export const vocabTabs: VocabTab[] = [
   withWords("body"),
 ];
 
-/** Splits items, in order, into lessons of at most 8 with sizes as even as possible. */
+/** Splits items, in order, into lessons of at most 10 with sizes as even as possible. */
 function chunk<T>(items: T[]): T[][] {
   const count = Math.ceil(items.length / LESSON_SIZE);
   const base = Math.floor(items.length / count);
@@ -225,7 +226,9 @@ export const poolFor = (tab: VocabTab, lesson: Lesson): Pool => ({
 });
 
 /**
- * The lesson, like Duolingo: each new item is shown and then asked, two at a time; then a round of
+ * The lesson: first all of its new items are shown, one after another (up to ten), and only then do the
+ * questions start (the owner, 2026-11-27: questions and sentence building come "after every ten
+ * sentences, not after two"). Each item is asked once in the order it was shown; then a round of
  * matching pairs; then up to two listening and two missing-word exercises; then every item is asked
  * once more, in a new order.
  * A sentence is never asked whole with whole meanings to choose from (the owner asked for this): it is
@@ -235,11 +238,8 @@ export const poolFor = (tab: VocabTab, lesson: Lesson): Pool => ({
 export function buildLesson(lesson: Lesson, pool: Pool): Exercise[] {
   const items = lesson.items;
   const steps: Exercise[] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    const two = items.slice(i, i + 2);
-    for (const it of two) steps.push({ kind: "intro", item: it });
-    for (const it of two) steps.push(buildable(it) ? practiceQ(it, pool) : meaningQ(it, pool));
-  }
+  for (const it of items) steps.push({ kind: "intro", item: it });
+  for (const it of items) steps.push(buildable(it) ? practiceQ(it, pool) : meaningQ(it, pool));
   // Short items only, so the two columns stay readable on a phone; no two with the same text.
   const short = items.filter((it) => it.deva.length <= 24 && it.meaning.length <= 40);
   const pairs = short.filter(
